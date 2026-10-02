@@ -103,6 +103,12 @@ injected-parameter names.
 | `[HarmonyPatch]` `argumentTypes` of the old `TakeDamage(..., Color, ...)` etc. | + trailing `DamageSource` | appended to `argumentTypes` |
 | `[HarmonyPatch(typeof(CardBar), "OnHover")]` without `argumentTypes` | ambiguous (two overloads) | adds `[HarmonyPatch(new[] { typeof(CardBarButton) })]` (REVIEW) |
 | `typeof(UnityEngine.Input)` / Steamworks types inside `[HarmonyPatch]` | stored as an assembly-qualified name | same retarget as IL type references |
+| `UnityEngine.UIVertex::uv0`…`uv3` (`Vector2`) | `Vector4` (Unity 2022) | `ldfld` + `Vector4.op_Implicit` → Vector2; `stfld` after Vector2 → Vector4 (z, w = 0); `ldflda` left MANUAL |
+
+Not changed by the update, but reported: `RPC("RPCA_AddSlow", ...)` with 1 argument (RSClasses). The old game's
+`RPCA_AddSlow` already took `(float slowToAdd, bool isFastSlow = false)`, and PUN matches the exact argument count
+(defaults aren't filled in), so the call was dropped on the old game too. Left MANUAL: appending `false` would change
+behaviour.
 
 The scanner now also follows HarmonyX: several complete `[HarmonyPatch]` attributes on one method are separate
 targets (`AttributePatch.Create`), not one merged target.

@@ -172,6 +172,25 @@ sealed class Fixer
                         else if (ld) { ReplaceWith(il, ins, Instruction.Create(OpCodes.Ldfld, nf), Instruction.Create(OpCodes.Conv_U1)); Count("read RoomOptions.MaxPlayers: int, converted to the old byte"); }
                         else Notes.Add($"MANUAL {md.FullName}: {ins.OpCode} on RoomOptions.MaxPlayers (now an int); left as is");
                     }
+                    else if (f.DeclaringType.FullName == "UnityEngine.UIVertex" && f.FieldType.FullName == "UnityEngine.Vector2" && f.Resolve() == null
+                             && f.DeclaringType.Resolve()?.Fields.FirstOrDefault(x => x.Name == f.Name && x.FieldType.FullName == "UnityEngine.Vector4") is FieldDefinition v4)
+                    {
+                        // uv0..uv3: Vector2 in Unity 2018, Vector4 now. Vector4's implicit conversions keep x and y (z, w = 0).
+                        var nf = M.ImportReference(v4);
+                        MethodReference Conv(string from, string to) => M.ImportReference(v4.FieldType.Resolve().Methods.Single(x =>
+                            x.Name == "op_Implicit" && x.Parameters[0].ParameterType.FullName == from && x.ReturnType.FullName == to));
+                        if (ld)
+                        {
+                            ReplaceWith(il, ins, Instruction.Create(OpCodes.Ldfld, nf), Instruction.Create(OpCodes.Call, Conv("UnityEngine.Vector4", "UnityEngine.Vector2")));
+                            Count($"read UIVertex.{f.Name}: Vector4 now, converted to Vector2");
+                        }
+                        else if (st)
+                        {
+                            ReplaceWith(il, ins, Instruction.Create(OpCodes.Call, Conv("UnityEngine.Vector2", "UnityEngine.Vector4")), Instruction.Create(OpCodes.Stfld, nf));
+                            Count($"write UIVertex.{f.Name}: Vector2 converted to the new Vector4");
+                        }
+                        else Notes.Add($"MANUAL {md.FullName}: {ins.OpCode} on UIVertex.{f.Name} (Vector4 now); left as is");
+                    }
                 }
                 else if (ins.Operand is MethodReference pm && (ins.OpCode == OpCodes.Call || ins.OpCode == OpCodes.Callvirt) && OtherCall(il, ins, pm)) { }
                 else if (ins.Operand is MethodReference mr && (ins.OpCode == OpCodes.Call || ins.OpCode == OpCodes.Callvirt) && mr.DeclaringType.Scope.Name.StartsWith("Assembly-CSharp"))

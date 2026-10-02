@@ -74,7 +74,7 @@ sealed class Scanner(Game game)
                     if (!r.Targets.Any(x => x.Parameters.Count == r.Args))
                         Add(new Issue(OnlyMissingDamageSource(r) ? Fix.Auto : Fix.Manual, "rpc", $"{t.FullName}::{m.Name} RPC(\"{r.Name}\") with {r.Args} argument{(r.Args == 1 ? "" : "s")}",
                             "the game's version takes " + string.Join(" | ", r.Targets.Select(x => "(" + string.Join(", ", x.Parameters.Select(p => p.ParameterType.Name)) + ")"))
-                            + ", and PUN drops RPCs with the wrong argument count" + (OnlyMissingDamageSource(r) ? "; fix appends DamageSource.Player" : "")));
+                            + ", and PUN drops RPCs with the wrong argument count" + (OnlyMissingDamageSource(r) ? "; fix appends DamageSource.Player" : Known.RpcNote(r))));
                 foreach (var ins in m.Body.Instructions)
                 {
                     if (ins.Operand is FieldReference f && f.Name == "cardName" && f.DeclaringType.FullName == "CardInfo" && IsGame(f.DeclaringType))
