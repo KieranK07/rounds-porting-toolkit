@@ -32,7 +32,8 @@ Remove it: `rounds-port uninstall-hotreload` (mods left in `BepInEx/scripts` the
 ## Use
 
 Mods in **`BepInEx/scripts`** (not `plugins`) are hot: they load at startup like any plugin, and reload about a
-second after their DLL changes. **F6** in game reloads all of them. Removing a DLL from the folder unloads it.
+second after their DLL changes. **F6** in game reloads all of them (on a Mac keyboard **fn+F6**: F6 alone is a
+system key there). Removing a DLL from the folder unloads it.
 
 | | Windows | macOS |
 |---|---|---|
