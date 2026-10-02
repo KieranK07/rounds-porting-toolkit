@@ -40,6 +40,7 @@ static class Sweep
 
         var scanner = new Scanner(game);
         var results = new List<Result>();
+        Out.Quiet = true;
         foreach (var (name, version, dir) in dirs)
         {
             var outDir = Path.Combine(Root, "out", name);
@@ -62,6 +63,7 @@ static class Sweep
             Out.Line($"  {Label(grade)} {name} {version}: {Counts(before)} -> {(left.Sum() == 0 ? "nothing left" : Counts(left))}");
         }
 
+        Out.Quiet = false;
         int Count(int g) => results.Count(r => r.Grade == g);
         Out.Line("");
         Out.Line($"{Count(0)} of {results.Count} with nothing left after fix; {Count(1)} only REVIEW, {Count(2)} MANUAL, {Count(3)} errors");

@@ -146,7 +146,8 @@ static class Out
     public static void Line(string s) => Console.WriteLine(s);
     public static void Error(string s) => Console.Error.WriteLine(C("31", "error: ") + s);
     public static void Warn(string s) => Console.Error.WriteLine(C("33", "warning: ") + s);
-    public static void Note(string s) => Console.Error.WriteLine(C("36", "note: ") + s);
+    public static bool Quiet;   // sweep: no per-mod notes
+    public static void Note(string s) { if (!Quiet) Console.Error.WriteLine(C("36", "note: ") + s); }
 
     public static void Unchecked(ICollection<string> missing)
     {
