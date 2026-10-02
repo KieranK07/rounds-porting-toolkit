@@ -192,6 +192,11 @@ sealed class Fixer
                         else Notes.Add($"MANUAL {md.FullName}: {ins.OpCode} on UIVertex.{f.Name} (Vector4 now); left as is");
                     }
                 }
+                else if (Scanner.IsDontDestroyOnLoad(ins) && scanner.RunsAtPluginLoad(md))
+                {
+                    ReplaceWith(il, ins, Instruction.Create(OpCodes.Call, Helper("KeepAlive")));
+                    Count($"{md.DeclaringType.Name}.{md.Name}: DontDestroyOnLoad -> __RoundsCompat.KeepAlive (survives the first scene load)");
+                }
                 else if (ins.Operand is MethodReference pm && (ins.OpCode == OpCodes.Call || ins.OpCode == OpCodes.Callvirt) && OtherCall(il, ins, pm)) { }
                 else if (ins.Operand is MethodReference mr && (ins.OpCode == OpCodes.Call || ins.OpCode == OpCodes.Callvirt) && mr.DeclaringType.Scope.Name.StartsWith("Assembly-CSharp"))
                 {

@@ -81,6 +81,9 @@ sealed class Scanner(Game game)
                         Add(ins.OpCode.Code == Code.Stfld
                             ? new Issue(Fix.Review, "behaviour", "CardInfo.cardName (write)", "private now. fix writes the private field, so name lookups still find it, but the title the game shows comes from localization: set that through UnboundLib's CustomCard")
                             : new Issue(Fix.Auto, "behaviour", "CardInfo.cardName (read)", "private now, and empty for UnboundLib 4 cards (names moved to localization). fix reads it through a helper that falls back to the localized key, CardName, then the GameObject name"));
+                    if (IsDontDestroyOnLoad(ins) && RunsAtPluginLoad(m))
+                        Add(new Issue(Fix.Auto, "behaviour", $"{t.FullName}::{m.Name} DontDestroyOnLoad at plugin load",
+                            "BepInEx starts plugins before the game loads its first scene, and that load destroys every object made earlier, DontDestroyOnLoad or not (MapsExtended's map object manager dies this way). fix also sets hideFlags DontSave on it, which keeps it"));
                     if (ins.OpCode.Code == Code.Ldstr && (string)ins.Operand == "GetRanomCard")
                         Add(new Issue(Fix.Auto, "reflection", $"{t.FullName}::{m.Name} \"GetRanomCard\"", "the typo was fixed: CardChoice.GetRandomCard"));
                 }
@@ -294,6 +297,19 @@ sealed class Scanner(Game game)
             string? fixTo = kind == "Field" && HasMember(td, "m_" + name, "Field") ? "m_" + name : null;
             yield return new ReflectSite(ld, where, name, $"{kind.ToLower()} {td.Name}.{name} not found" + Hints(td, name), fixTo);
         }
+    }
+
+    // ---------------------------------------------------------------- plugin load
+    public static bool IsDontDestroyOnLoad(Instruction ins) =>
+        ins.OpCode.Code is Code.Call or Code.Callvirt && ins.Operand is MethodReference r && r.Name == "DontDestroyOnLoad" && r.DeclaringType.FullName == "UnityEngine.Object";
+
+    // A BepInEx plugin's Awake or constructor: these run while no scene is loaded yet.
+    public bool RunsAtPluginLoad(MethodDefinition m)
+    {
+        if (m.Name is not ("Awake" or ".ctor")) return false;
+        for (var t = Resolve(m.DeclaringType.BaseType ?? m.DeclaringType); t != null; t = t.BaseType == null ? null : Resolve(t.BaseType))
+            if (t.FullName == "BepInEx.BaseUnityPlugin") return true;
+        return false;
     }
 
     // ---------------------------------------------------------------- helpers

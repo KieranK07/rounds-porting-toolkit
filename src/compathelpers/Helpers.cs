@@ -134,6 +134,21 @@ public static class __RoundsCompat
         if (ui.gameOverText != null) ui.gameOverText.ResetReference(text);
     }
 
+    // DontDestroyOnLoad from a plugin's Awake or constructor. BepInEx now starts plugins before the game has loaded any
+    // scene, and loading the first one destroys every object made before it, DontDestroyOnLoad or not. DontSave on the
+    // root GameObject keeps it (tested in game).
+    public static void KeepAlive(UnityEngine.Object target)
+    {
+        UnityEngine.Object.DontDestroyOnLoad(target);
+        GameObject go = target as GameObject;
+        if ((object)go == null)
+        {
+            Component c = target as Component;
+            if ((object)c != null) go = c.gameObject;
+        }
+        if ((object)go != null) go.transform.root.gameObject.hideFlags |= HideFlags.DontSave;
+    }
+
     // PlayerManager.AddPlayerDiedAction(action) was removed; PlayerDiedAction is a public field now.
     public static void AddPlayerDiedAction(PlayerManager manager, Action<Player, int> action)
     {

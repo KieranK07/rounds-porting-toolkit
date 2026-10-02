@@ -100,6 +100,9 @@ Unity's own components (TextMeshPro, UI) are left to Unity, which upgrades their
 - Behaviour changes that still compile and resolve. Known ones it warns about: object pooling
   (`ObjectsToSpawn.SpawnObject` returns `PoolableWrapper[]`, don't `Destroy()` pooled objects), `TrickShot` setup moved
   to `Start`, `ChangeColor` is an empty marker, Odin Serializer isn't shipped with the game anymore.
+- Objects your plugin creates in `Awake`: BepInEx now starts plugins before the game loads its first scene, and that
+  load destroys them, even with `DontDestroyOnLoad`. `fix` handles `DontDestroyOnLoad` calls made directly in `Awake`;
+  if you create objects there some other way, set `hideFlags = HideFlags.DontSave` on them or create them in `Start`.
 - Clashes between mods at runtime. Example: UnboundLib 4's card-pick stats panel calls `ResetStats` on components
   that aren't on any GameObject; a `ResetStats` prefix that calls `GetComponent` throws there. Guard patches that may
   run on such objects (`if (__instance == null) return;` is true for them in Unity).

@@ -110,6 +110,8 @@ Not changed by the update, but reported: `RPC("RPCA_AddSlow", ...)` with 1 argum
 (defaults aren't filled in), so the call was dropped on the old game too. Left MANUAL: appending `false` would change
 behaviour.
 
+| `DontDestroyOnLoad(obj)` in a `BaseUnityPlugin`'s `Awake` or constructor | Plugins start at frame 0 with no scene loaded; loading "Main" destroys every object made before it, `DontDestroyOnLoad` or not (seen in game: MapsExtended's "Root Map Object Manager", which broke custom-map physics objects for every non-host player). Objects with `HideFlags.DontSave` survive | `__RoundsCompat.KeepAlive(obj)`: `DontDestroyOnLoad` plus `DontSave` on the root GameObject |
+
 The scanner now also follows HarmonyX: several complete `[HarmonyPatch]` attributes on one method are separate
 targets (`AttributePatch.Create`), not one merged target.
 
