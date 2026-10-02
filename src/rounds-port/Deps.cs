@@ -73,6 +73,40 @@ static class Deps
         }
     }
 
+    // A Thunderstore package's DLLs (flattened) in the cache, downloaded once; null when it has none (modpacks, maps).
+    // With a sha, the zip is checked against it.
+    public static string? ThunderstorePackage(string name, string version, string? sha = null)
+    {
+        var dir = Path.Combine(Cache, "thunderstore", $"{name}-{version}");
+        if (File.Exists(Path.Combine(dir, ".nodll"))) return null;
+        if (File.Exists(Path.Combine(dir, ".complete"))) return dir;
+        var dash = name.IndexOf('-');
+        if (dash < 1) throw new UserError($"{name}: not a Thunderstore package name (Namespace-Name)");
+        Out.Note($"downloading {name} {version} from Thunderstore (once, to {dir})");
+        var zip = Download($"https://thunderstore.io/package/download/{name[..dash]}/{name[(dash + 1)..]}/{version}/", sha);
+        if (Directory.Exists(dir)) Directory.Delete(dir, true);
+        Directory.CreateDirectory(dir);
+        using var z = new ZipArchive(new MemoryStream(zip));
+        var dlls = z.Entries.Where(e => e.FullName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)).ToList();
+        foreach (var e in dlls) e.ExtractToFile(Path.Combine(dir, Path.GetFileName(e.FullName.Replace('\\', '/'))), true);
+        File.WriteAllText(Path.Combine(dir, dlls.Count == 0 ? ".nodll" : ".complete"), "");
+        return dlls.Count == 0 ? null : dir;
+    }
+
+    // Libraries mods use, by assembly name -> (Thunderstore package, version, zip sha256). Generated from the 100
+    // most-downloaded mods and the packages other mods depend on (thunderstore-libs.tsv).
+    public static readonly Dictionary<string, (string package, string version, string sha)> Libraries = LoadLibraries();
+
+    static Dictionary<string, (string, string, string)> LoadLibraries()
+    {
+        using var s = typeof(Deps).Assembly.GetManifestResourceStream("thunderstore-libs.tsv")!;
+        using var r = new StreamReader(s);
+        var map = new Dictionary<string, (string, string, string)>(StringComparer.OrdinalIgnoreCase);
+        for (string? l; (l = r.ReadLine()) != null;)
+            if (l.Length > 0 && !l.StartsWith('#') && l.Split('\t') is { Length: 4 } p) map[p[0]] = (p[1], p[2], p[3]);
+        return map;
+    }
+
     public static byte[] Download(string url, string? sha)
     {
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };

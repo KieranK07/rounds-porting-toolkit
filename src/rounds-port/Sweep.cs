@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Security.Cryptography;
 using System.Text.Json;
 
@@ -11,7 +10,7 @@ static class Sweep
     const string Api = "https://thunderstore.io/c/rounds/api/v1/package/";
     // Not mods: mod managers and the BepInEx pack.
     static readonly string[] NotMods = { "ebkr-r2modman", "Kesomannen-GaleModManager", "BepInEx-BepInExPack_ROUNDS" };
-    static string Root => Path.Combine(Deps.Cache, "sweep");
+    static string Root => Path.Combine(Deps.Cache, "sweep");   // fixed copies; downloads are in Deps.Cache/thunderstore
 
     sealed record Result(string Name, string Version, int[] Before, int[] Left, int Grade, string Hashes);
 
@@ -34,6 +33,7 @@ static class Sweep
         var refs = dirs.Where(d => !Game.OldPackages.Contains(d.name)).Select(d => d.dir).ToList();
         var game = new Game(gameDir, refs, Array.Empty<string>());
         game.EnsureRoundsWithFriends3();
+        game.EnsureDependencies(dirs.SelectMany(d => Program.Expand(new() { d.dir })).ToList());
         Out.Line($"game: {game.Dir}");
         Out.Line($"UnboundLib: {game.UnboundLib ?? "not found"}");
         Out.Line("");
@@ -96,24 +96,7 @@ static class Sweep
     static string Label(int grade) => grade switch { 0 => "clean ", 1 => "REVIEW", 2 => "MANUAL", _ => "ERROR " };
     static string Counts(int[] c) => $"{c[0]} auto, {c[1]} review, {c[2]} manual";
 
-    // The package's DLLs (flattened) in the cache, downloading it once. Null when it has no DLLs (modpacks, maps).
-    static string? Fetch(string name, string version)
-    {
-        var dir = Path.Combine(Root, "mods", $"{name}-{version}");
-        if (File.Exists(Path.Combine(dir, ".nodll"))) return null;
-        if (File.Exists(Path.Combine(dir, ".complete"))) return dir;
-        var dash = name.IndexOf('-');
-        if (dash < 1) throw new UserError($"{name}: not a Thunderstore package name (Namespace-Name)");
-        Out.Note($"downloading {name} {version}");
-        var zip = Deps.Download($"https://thunderstore.io/package/download/{name[..dash]}/{name[(dash + 1)..]}/{version}/", null);
-        if (Directory.Exists(dir)) Directory.Delete(dir, true);
-        Directory.CreateDirectory(dir);
-        using var z = new ZipArchive(new MemoryStream(zip));
-        var dlls = z.Entries.Where(e => e.FullName.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)).ToList();
-        foreach (var e in dlls) e.ExtractToFile(Path.Combine(dir, Path.GetFileName(e.FullName.Replace('\\', '/'))), true);
-        File.WriteAllText(Path.Combine(dir, dlls.Count == 0 ? ".nodll" : ".complete"), "");
-        return dlls.Count == 0 ? null : dir;
-    }
+    static string? Fetch(string name, string version) => Deps.ThunderstorePackage(name, version);
 
     // The n most-downloaded ROUNDS packages that contain DLLs, at their current versions.
     static void MakeList(string list, int n)

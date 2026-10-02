@@ -75,9 +75,11 @@ try
     Out.Line($"game: {game.Dir}");
     Out.Line($"UnboundLib: {game.UnboundLib ?? "not found (add --ref <folder with Bknibb's UnboundLib 4>)"}");
     if (args[0] == "hot") return Hot.Run(game, inputs, watch);
+    var dlls = Program.Expand(inputs).ToList();
+    game.EnsureDependencies(dlls);
     var scanner = new Scanner(game);
     int worst = 0;
-    foreach (var dll in Program.Expand(inputs))
+    foreach (var dll in dlls)
     {
         Out.Line("");
         Ported p;

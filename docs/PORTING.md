@@ -30,9 +30,10 @@ You need BepInEx plus the libraries most mods depend on, already ported to v1.1.
 ```
 
 The header says which game and which UnboundLib it checked against. If the game has no BepInEx or UnboundLib 4, it
-downloads them once (only to read your mod). If your mod uses other mods that aren't installed, it says
-`not checked: what it uses from ModdingUtils...`: put them in `BepInEx\plugins` or add `--ref <folder>` to check those
-parts too.
+downloads them once (only to read your mod). Mods yours uses are found in `BepInEx\plugins` and in r2modman,
+Thunderstore Mod Manager and Gale profiles; the usual libraries (ModdingUtils, RarityLib, Classes Manager Reborn and
+about 100 more) are downloaded from Thunderstore if they aren't installed. If something is still missing, it says
+`not checked: what it uses from ...`: add `--ref <folder>` to check those parts too.
 
 Each line is **AUTO** (`fix` handles it), **REVIEW** (handled or probably fine, look at it) or **MANUAL** (yours).
 

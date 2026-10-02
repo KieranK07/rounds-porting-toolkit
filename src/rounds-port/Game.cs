@@ -26,6 +26,11 @@ sealed class Game
         foreach (var i in inputs) AddTree(Directory.Exists(i) ? i : Path.GetDirectoryName(Path.GetFullPath(i))!, skipOld: false);
         var plugins = Path.Combine(Dir, "BepInEx", "plugins");
         if (Directory.Exists(plugins)) AddTree(plugins, skipOld: true);
+        // Mod-manager profiles (r2modman, Thunderstore Mod Manager, Gale) keep mods outside the game folder.
+        var profiles = ModManagerProfiles().ToList();
+        foreach (var p in profiles) AddTree(p.plugins, skipOld: true);
+        if (profiles.Count > 0)
+            Out.Note("also reading mods from " + string.Join(", ", profiles.Select(p => $"{p.manager} profile \"{p.profile}\"")));
         // Not in the game (a plain install, or still the old UnboundLib 3): fetch what's needed to read mods.
         if (Resolver.Path("BepInEx") == null && Deps.BepInExCore() is string bc)
             foreach (var f in Directory.GetFiles(bc, "*.dll")) Resolver.Add(f);
@@ -46,7 +51,63 @@ sealed class Game
         }
     }
 
-    // RoundsWithFriends 3 (Bknibb's port) from the game, else downloaded; for sweep, where many mods use it.
+    // Mods this one uses that aren't installed anywhere: known libraries come from Thunderstore (pinned version,
+    // checksum-checked), RoundsWithFriends as Bknibb's 3.x. Their own dependencies too. Only for reading the mod.
+    public void EnsureDependencies(IEnumerable<string> dlls)
+    {
+        var queue = new Queue<string>(dlls);
+        var tried = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        while (queue.Count > 0)
+        {
+            var dll = queue.Dequeue();
+            List<string> names;
+            try { using var m = ModuleDefinition.ReadModule(dll); names = m.AssemblyReferences.Select(a => a.Name).ToList(); }
+            catch { continue; }
+            var missing = names.Where(n => Resolver.Path(n) == null && tried.Add(n)).ToList();
+            if (missing.Remove("RoundsWithFriends")) EnsureRoundsWithFriends3();
+            var libs = missing.Where(Deps.Libraries.ContainsKey).ToList();
+            if (libs.Count == 0) continue;
+            Out.Note($"{Path.GetFileName(dll)} uses {string.Join(", ", libs)}, not installed: checking against them from Thunderstore");
+            foreach (var name in libs)
+            {
+                var lib = Deps.Libraries[name];
+                string? dir;
+                try { dir = Deps.ThunderstorePackage(lib.package, lib.version, lib.sha); }
+                catch (Exception e) { Out.Warn($"couldn't get {lib.package} {lib.version} ({e.Message})"); continue; }
+                if (dir == null) continue;
+                AddTree(dir, skipOld: false);
+                foreach (var f in Directory.GetFiles(dir, "*.dll")) queue.Enqueue(f);
+            }
+        }
+    }
+
+    static IEnumerable<(string manager, string profile, string plugins)> ModManagerProfiles()
+    {
+        var bases = new[] { Environment.SpecialFolder.ApplicationData, Environment.SpecialFolder.LocalApplicationData }
+            .Select(Environment.GetFolderPath).Where(b => b.Length > 0).Distinct();
+        var managers = new[] { ("r2modman", "r2modmanPlus-local"), ("Thunderstore Mod Manager", Path.Combine("Thunderstore Mod Manager", "DataFolder")), ("Gale", "com.kesomannen.gale") };
+        var found = new List<(string, string, string, DateTime)>();
+        foreach (var b in bases)
+            foreach (var (manager, sub) in managers)
+            {
+                var root = Path.Combine(b, sub);
+                if (!Directory.Exists(root)) continue;
+                foreach (var game in Directory.GetDirectories(root).Where(d => Path.GetFileName(d).Equals("ROUNDS", StringComparison.OrdinalIgnoreCase)))
+                {
+                    var profiles = Path.Combine(game, "profiles");
+                    if (!Directory.Exists(profiles)) continue;
+                    foreach (var prof in Directory.GetDirectories(profiles))
+                    {
+                        var plugins = Path.Combine(prof, "BepInEx", "plugins");
+                        if (Directory.Exists(plugins)) found.Add((manager, Path.GetFileName(prof), plugins, Directory.GetLastWriteTimeUtc(plugins)));
+                    }
+                }
+            }
+        // most recently changed profile first: it wins when two profiles have different versions of a mod
+        return found.OrderByDescending(f => f.Item4).Select(f => (f.Item1, f.Item2, f.Item3)).Distinct();
+    }
+
+    // RoundsWithFriends 3 (Bknibb's port) from the game, else downloaded.
     public void EnsureRoundsWithFriends3()
     {
         if ((Resolver.Get("RoundsWithFriends")?.Name.Version.Major ?? 0) >= 3) return;

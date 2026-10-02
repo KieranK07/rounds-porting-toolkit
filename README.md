@@ -51,7 +51,9 @@ Mods are checked against BepInEx 5 and **Bknibb's UnboundLib 4**
 ([release](https://github.com/Bknibb/UnboundLib/releases/tag/v4.2.5)), the UnboundLib that works on v1.1.2. It uses
 the game's copies; if the game doesn't have them, it downloads them once from their GitHub releases (checksum-checked)
 to read mods with. Nothing is installed into the game. Other mods yours uses (ModdingUtils, RarityLib...) are read
-from `BepInEx\plugins` or `--ref <folder>`; if they're missing, the report says what it couldn't check.
+from `BepInEx\plugins`, your r2modman / Thunderstore Mod Manager / Gale profiles, or `--ref <folder>`. Known libraries
+that aren't installed anywhere are downloaded from Thunderstore (pinned versions, checksum-checked), only to read your
+mod; anything still missing is listed as not checked.
 
 The **[porting guide](docs/PORTING.md)** goes from here to a release build: testing in game, what to change in your
 source, and what the tool can't see.

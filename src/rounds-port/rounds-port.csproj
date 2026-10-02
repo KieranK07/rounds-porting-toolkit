@@ -16,5 +16,7 @@
     <!-- src/HotReload, prebuilt (it needs the game to compile); install-hotreload writes these into the game -->
     <EmbeddedResource Include="embedded/HotReload.dll" LogicalName="HotReload.dll" />
     <EmbeddedResource Include="embedded/HotReload.pdb" LogicalName="HotReload.pdb" />
+    <!-- library assembly -> Thunderstore package, for mods whose dependencies aren't installed -->
+    <EmbeddedResource Include="thunderstore-libs.tsv" LogicalName="thunderstore-libs.tsv" />
   </ItemGroup>
 </Project>
