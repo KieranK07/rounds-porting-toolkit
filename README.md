@@ -153,7 +153,8 @@ add `-p:GameDir="<folder>"`. After changing `src/compathelpers` or `src/HotReloa
 bytes on Windows and macOS. Release binaries: `scripts/publish.sh`.
 
 New rename or rule? The table of known changes is `src/rounds-port/Known.cs`, the rewrites are in `Fixer.cs`, the
-checks in `Scanner.cs`. Issues and pull requests welcome.
+checks in `Scanner.cs`. Check a change against 98 real mods with the sweep ([tests/README.md](tests/README.md)).
+Issues and pull requests welcome.
 
 ## Credits
 

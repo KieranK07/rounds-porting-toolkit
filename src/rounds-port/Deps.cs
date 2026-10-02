@@ -16,7 +16,7 @@ static class Deps
             "926b53b329d94f6a8842e6d51ca17ff96f081df59695d7862845d5ccce9e5a62"),
     };
 
-    static string Cache => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "rounds-port");
+    public static string Cache => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "rounds-port");
 
     // BepInEx/core of BepInEx 5.4.23.5, or null (with a message) if it can't be fetched.
     public static string? BepInExCore()
@@ -43,31 +43,42 @@ static class Deps
         }
     }
 
-    // Bknibb's UnboundLib 4.2.5 (UnboundLib.dll + MMHOOK_Assembly-CSharp.dll), or null (with a message).
-    public static string? UnboundLib4()
+    static readonly (string name, string url, string sha)[] RwfFiles =
     {
-        var dir = Path.Combine(Cache, "UnboundLib-4.2.5");
-        if (UnboundLibFiles.All(f => File.Exists(Path.Combine(dir, f.name)))) return dir;
-        Out.Note($"UnboundLib 4 isn't in the game; downloading Bknibb's 4.2.5 to check mods against (once, to {dir})");
+        ("RoundsWithFriends.dll", "https://github.com/Bknibb/RoundsWithFriends/releases/download/v3.0.10/RoundsWithFriends.dll",
+            "1bd4d5aa47de0e04661710a77bb0b5f1214dac4b3baabc9364b3418ecbc8ab61"),
+    };
+
+    // Bknibb's UnboundLib 4.2.5 (UnboundLib.dll + MMHOOK_Assembly-CSharp.dll), or null (with a message).
+    public static string? UnboundLib4() => Files("UnboundLib-4.2.5", UnboundLibFiles, "UnboundLib 4", "Bknibb's 4.2.5", "Bknibb's UnboundLib 4");
+
+    // Bknibb's RoundsWithFriends 3.0.10, or null (with a message). Only `sweep` asks for it: many mods use RWF.
+    public static string? RoundsWithFriends3() => Files("RoundsWithFriends-3.0.10", RwfFiles, "RoundsWithFriends 3", "Bknibb's 3.0.10", "Bknibb's RoundsWithFriends 3");
+
+    static string? Files(string folder, (string name, string url, string sha)[] files, string what, string which, string refHint)
+    {
+        var dir = Path.Combine(Cache, folder);
+        if (files.All(f => File.Exists(Path.Combine(dir, f.name)))) return dir;
+        Out.Note($"{what} isn't in the game; downloading {which} to check mods against (once, to {dir})");
         try
         {
             Directory.CreateDirectory(dir);
-            foreach (var f in UnboundLibFiles) File.WriteAllBytes(Path.Combine(dir, f.name), Download(f.url, f.sha));
+            foreach (var f in files) File.WriteAllBytes(Path.Combine(dir, f.name), Download(f.url, f.sha));
             return dir;
         }
         catch (Exception e)
         {
-            Out.Warn($"couldn't get UnboundLib 4 ({e.Message}). Pass --ref <folder with Bknibb's UnboundLib 4>.");
+            Out.Warn($"couldn't get {what} ({e.Message}). Pass --ref <folder with {refHint}>.");
             return null;
         }
     }
 
-    static byte[] Download(string url, string sha)
+    public static byte[] Download(string url, string? sha)
     {
         using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(2) };
         http.DefaultRequestHeaders.UserAgent.ParseAdd("rounds-port");
         var bytes = http.GetByteArrayAsync(url).GetAwaiter().GetResult();
-        if (Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant() != sha)
+        if (sha != null && Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant() != sha)
             throw new Exception($"checksum mismatch for {url}");
         return bytes;
     }

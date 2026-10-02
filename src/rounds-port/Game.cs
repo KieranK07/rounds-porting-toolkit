@@ -11,7 +11,7 @@ sealed class Game
     public string? UnboundLib;   // "4.2.5 (path)" when found
 
     // Old packages that are known not to work on the 2025 build and would shadow their replacements.
-    static readonly string[] OldPackages = { "willis81808-UnboundLib", "willis81808-MMHook", "olavim-RoundsWithFriends" };
+    public static readonly string[] OldPackages = { "willis81808-UnboundLib", "willis81808-MMHook", "olavim-RoundsWithFriends" };
 
     public Game(string? dir, IEnumerable<string> refs, IEnumerable<string> inputs)
     {
@@ -44,6 +44,13 @@ sealed class Game
             UnboundLib = $"{v} ({ul})";
             if (v.Major < 4) UnboundLib += "  !! this is the old UnboundLib; get Bknibb's 4.x port (github.com/Bknibb/UnboundLib) and pass --ref <its folder>";
         }
+    }
+
+    // RoundsWithFriends 3 (Bknibb's port) from the game, else downloaded; for sweep, where many mods use it.
+    public void EnsureRoundsWithFriends3()
+    {
+        if ((Resolver.Get("RoundsWithFriends")?.Name.Version.Major ?? 0) >= 3) return;
+        if (Deps.RoundsWithFriends3() is string rwf) foreach (var f in Directory.GetFiles(rwf, "*.dll")) Resolver.Set(f);
     }
 
     // Adds every DLL under dir. When two files have the same assembly name, the higher version wins

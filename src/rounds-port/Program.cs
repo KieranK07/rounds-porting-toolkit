@@ -11,6 +11,9 @@ rounds-port: port ROUNDS mods to the current game build (the 2025 update)
   rounds-port install-hotreload            add the optional Hot Reload plugin to the game (BepInEx/plugins/HotReload)
   rounds-port uninstall-hotreload          remove it again
 
+  rounds-port sweep <list.tsv>             regression test: scan and fix a pinned list of Thunderstore mods
+                                           (for working on rounds-port itself; see tests/README.md)
+
 options
   --game <dir>     ROUNDS folder (found through Steam if you leave it out)
   --ref <dir>      another folder of DLLs your mod uses, e.g. Bknibb's UnboundLib 4 (repeatable)
@@ -18,15 +21,18 @@ options
   --pdb            fix also writes a .pdb (line numbers in error stack traces)
   --watch          hot: keep watching the DLL and swap in every rebuild
   --version        print the version
+  --top <n>        sweep: first make <list.tsv> from the n most-downloaded Thunderstore mods (current versions)
+  --save <file>    sweep: write the results to <file>
+  --compare <file> sweep: list what changed against results saved earlier (exit 1 if anything did)
 
 Each problem is marked AUTO (fix handles it), REVIEW (fix handles it, check the result) or MANUAL (change your source).
 Exit code: 0 nothing left to do, 1 only AUTO/REVIEW items, 2 MANUAL items remain, 3 error.
 """;
 
 if (args.Length > 0 && args[0] is "-v" or "--version") { Console.WriteLine("rounds-port " + typeof(Out).Assembly.GetName().Version?.ToString(3)); return 0; }
-if (args.Length == 0 || args[0] is "-h" or "--help" || args[0] is not ("scan" or "fix" or "hot" or "install-hotreload" or "uninstall-hotreload")) { Console.Write(Usage); return args.Length == 0 || args[0] is "-h" or "--help" ? 0 : 3; }
+if (args.Length == 0 || args[0] is "-h" or "--help" || args[0] is not ("scan" or "fix" or "hot" or "sweep" or "install-hotreload" or "uninstall-hotreload")) { Console.Write(Usage); return args.Length == 0 || args[0] is "-h" or "--help" ? 0 : 3; }
 bool fix = args[0] == "fix";
-string? gameDir = null, outDir = null; bool pdb = false, watch = false;
+string? gameDir = null, outDir = null, save = null, compare = null; bool pdb = false, watch = false; int top = 0;
 var refs = new List<string>(); var inputs = new List<string>();
 for (int i = 1; i < args.Length; i++)
 {
@@ -40,6 +46,9 @@ for (int i = 1; i < args.Length; i++)
             case "-o" or "--out": outDir = Next(); break;
             case "--pdb": pdb = true; break;
             case "--watch": watch = true; break;
+            case "--top": top = int.TryParse(Next(), out var n) && n > 0 ? n : throw new UserError("--top needs a number"); break;
+            case "--save": save = Next(); break;
+            case "--compare": compare = Next(); break;
             default:
                 if (args[i].StartsWith('-')) throw new UserError($"unknown option {args[i]}");
                 inputs.Add(args[i]); break;
@@ -50,6 +59,12 @@ for (int i = 1; i < args.Length; i++)
 if (args[0] is "install-hotreload" or "uninstall-hotreload")
 {
     try { return HotReloadSetup.Run(gameDir, install: args[0] == "install-hotreload"); }
+    catch (UserError e) { Out.Error(e.Message); return 3; }
+}
+if (args[0] == "sweep")
+{
+    if (inputs.Count != 1) { Out.Error("sweep needs one list file (tests/sweep-packages.tsv in the repo)"); return 3; }
+    try { return Sweep.Run(gameDir, inputs[0], top, save, compare); }
     catch (UserError e) { Out.Error(e.Message); return 3; }
 }
 if (inputs.Count == 0) { Out.Error("give at least one mod DLL or folder"); return 3; }
@@ -65,46 +80,44 @@ try
     foreach (var dll in Program.Expand(inputs))
     {
         Out.Line("");
-        var rp = new ReaderParameters { AssemblyResolver = game.Resolver, ReadingMode = ReadingMode.Immediate, InMemory = true };
-        ModuleDefinition module;
-        try { module = ModuleDefinition.ReadModule(dll, rp); }
-        catch (Exception e) { Out.Error($"{dll}: can't read it ({e.Message})"); worst = 3; continue; }
-
-        var issues = scanner.Scan(module);
-        if (!fix)
-        {
-            Out.Report(Path.GetFileName(dll), issues);
-            Out.Unchecked(scanner.Unchecked);
-            worst = Math.Max(worst, Grade(issues));
-            continue;
-        }
-
-        var fixer = new Fixer(module, game, scanner);
-        fixer.Run();
-        if (!fixer.Changed)
-        {
-            Out.Report(Path.GetFileName(dll) + " (nothing to rewrite)", issues);
-            Out.Unchecked(scanner.Unchecked);
-            worst = Math.Max(worst, Grade(issues));
-            continue;
-        }
-        var dest = Path.Combine(outDir ?? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(dll))!, "ported"), Path.GetFileName(dll));
-        Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-        if (pdb) module.Write(dest, new WriterParameters { WriteSymbols = true, SymbolWriterProvider = new Mono.Cecil.Cil.PortablePdbWriterProvider() });
-        else module.Write(dest);
-        var left = scanner.Scan(ModuleDefinition.ReadModule(dest, rp));
-        Out.Fixed(Path.GetFileName(dll), dest, fixer.Changes, fixer.Notes, issues.Count, left);
+        Ported p;
+        try { p = Program.Port(dll, game, scanner, fix, outDir ?? Path.Combine(Path.GetDirectoryName(Path.GetFullPath(dll))!, "ported"), pdb); }
+        catch (BadImageFormatException e) { Out.Error($"{dll}: can't read it ({e.Message})"); worst = 3; continue; }
+        if (p.Dest == null) Out.Report(Path.GetFileName(dll) + (fix ? " (nothing to rewrite)" : ""), p.Before);
+        else Out.Fixed(Path.GetFileName(dll), p.Dest, p.Fixer!.Changes, p.Fixer.Notes, p.Before.Count, p.Left);
         Out.Unchecked(scanner.Unchecked);
-        worst = Math.Max(worst, Grade(left));
+        worst = Math.Max(worst, Program.Grade(p.Left));
     }
     return worst;
 }
 catch (UserError e) { Out.Error(e.Message); return 3; }
 
-static int Grade(List<Issue> issues) => issues.Count == 0 ? 0 : issues.Any(i => i.Fix == Fix.Manual) ? 2 : 1;
+sealed record Ported(List<Issue> Before, List<Issue> Left, Fixer? Fixer, string? Dest);
 
 static partial class Program
 {
+public static int Grade(List<Issue> issues) => issues.Count == 0 ? 0 : issues.Any(i => i.Fix == Fix.Manual) ? 2 : 1;
+
+// One mod: scan it; with fix, rewrite it into outDir and scan the result. Dest is null when nothing was written.
+// An unreadable DLL throws BadImageFormatException.
+public static Ported Port(string dll, Game game, Scanner scanner, bool fix, string outDir, bool pdb)
+{
+    var rp = new ReaderParameters { AssemblyResolver = game.Resolver, ReadingMode = ReadingMode.Immediate, InMemory = true };
+    ModuleDefinition module;
+    try { module = ModuleDefinition.ReadModule(dll, rp); }
+    catch (Exception e) when (e is not BadImageFormatException) { throw new BadImageFormatException(e.Message, e); }
+    var issues = scanner.Scan(module);
+    if (!fix) return new(issues, issues, null, null);
+    var fixer = new Fixer(module, game, scanner);
+    fixer.Run();
+    if (!fixer.Changed) return new(issues, issues, fixer, null);
+    var dest = Path.Combine(outDir, Path.GetFileName(dll));
+    Directory.CreateDirectory(outDir);
+    if (pdb) module.Write(dest, new WriterParameters { WriteSymbols = true, SymbolWriterProvider = new Mono.Cecil.Cil.PortablePdbWriterProvider() });
+    else module.Write(dest);
+    return new(issues, scanner.Scan(ModuleDefinition.ReadModule(dest, rp)), fixer, dest);
+}
+
 // Files as given; folders: every DLL inside that references the game (skips libraries like Odin or MMHOOK).
 public static IEnumerable<string> Expand(List<string> inputs)
 {
