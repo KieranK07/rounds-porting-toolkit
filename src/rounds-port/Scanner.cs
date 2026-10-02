@@ -58,7 +58,7 @@ sealed class Scanner(Game game)
             foreach (var (info, patch) in HarmonyPatches(t))
             {
                 if (info.Type != null && MissingModDependency(info.Type)) continue;
-                if (TargetProblem(info) is string p) { Add(Known.HarmonyTarget(info, p)); continue; }
+                if (TargetProblem(info) is string p) { Add(Known.HarmonyTarget(info, p, DamageSourceOverload(info) != null)); continue; }
                 foreach (var pm in patch)
                     foreach (var (param, problem, fixTo) in PatchParamProblems(info, pm))
                         Add(new Issue(fixTo != null ? Fix.Review : Fix.Manual, "harmony param", $"{t.FullName}::{pm.Name} ({param}) -> {info}",
@@ -79,7 +79,7 @@ sealed class Scanner(Game game)
                 {
                     if (ins.Operand is FieldReference f && f.Name == "cardName" && f.DeclaringType.FullName == "CardInfo" && IsGame(f.DeclaringType))
                         Add(ins.OpCode.Code == Code.Stfld
-                            ? new Issue(Fix.Manual, "behaviour", "CardInfo.cardName (write)", "private now, and the game reads names from localization. Set the card's title through UnboundLib's CustomCard instead")
+                            ? new Issue(Fix.Review, "behaviour", "CardInfo.cardName (write)", "private now. fix writes the private field, so name lookups still find it, but the title the game shows comes from localization: set that through UnboundLib's CustomCard")
                             : new Issue(Fix.Auto, "behaviour", "CardInfo.cardName (read)", "private now, and empty for UnboundLib 4 cards (names moved to localization). fix reads it through a helper that falls back to the localized key, CardName, then the GameObject name"));
                     if (ins.OpCode.Code == Code.Ldstr && (string)ins.Operand == "GetRanomCard")
                         Add(new Issue(Fix.Auto, "reflection", $"{t.FullName}::{m.Name} \"GetRanomCard\"", "the typo was fixed: CardChoice.GetRandomCard"));
@@ -121,13 +121,20 @@ sealed class Scanner(Game game)
         var own = t.Methods.Where(m => m.CustomAttributes.Any(a => a.AttributeType.Name == "HarmonyPatch")).ToList();
         static bool IsPatchMethod(MethodDefinition m) => m.Name is "Prefix" or "Postfix" or "Finalizer"
             || m.CustomAttributes.Any(a => a.AttributeType.Name is "HarmonyPrefix" or "HarmonyPostfix" or "HarmonyFinalizer");
-        if (classAttr != null)
+        if (classAttr != null && own.Count == 0) yield return (classAttr, t.Methods.Where(IsPatchMethod).ToList());
+        // As HarmonyX does (AttributePatch.Create): several complete [HarmonyPatch]es on one method (a method name, and a
+        // type here or on the class) are separate targets, each merged with the incomplete ones; otherwise all merge.
+        bool classType = classAttr?.Type != null || classAttr?.TypeName != null;
+        foreach (var pm in own)
         {
-            if (own.Count == 0) yield return (classAttr, t.Methods.Where(IsPatchMethod).ToList());
-            foreach (var pm in own) yield return (HarmonyInfo.Merge(classAttr, HarmonyInfo.From(pm.CustomAttributes)!), new() { pm });
+            var each = pm.CustomAttributes.Where(a => a.AttributeType.Name == "HarmonyPatch").Select(a => HarmonyInfo.From(new[] { a })!).ToList();
+            bool Complete(HarmonyInfo x) => x.Method != null && (classType || x.Type != null || x.TypeName != null);
+            var complete = each.Where(Complete).ToList();
+            var targets = complete.Count > 1
+                ? complete.Select(c => each.Where(x => !Complete(x)).Append(c).Aggregate(HarmonyInfo.Merge))
+                : new[] { HarmonyInfo.From(pm.CustomAttributes)! };
+            foreach (var info in targets) yield return (classAttr != null ? HarmonyInfo.Merge(classAttr, info) : info, new() { pm });
         }
-        else
-            foreach (var pm in own) yield return (HarmonyInfo.From(pm.CustomAttributes)!, new() { pm });
     }
 
     public TypeDefinition? TargetType(HarmonyInfo h) => h.Type != null ? Resolve(h.Type) : h.TypeName != null ? FindType(h.TypeName) : null;
@@ -156,6 +163,21 @@ sealed class Scanner(Game game)
         }
         return "method not found" + Hints(td, h.Method);
     }
+
+    // A damage-method target whose argumentTypes lack the trailing HealthHandler.DamageSource the game added.
+    public MethodDefinition? DamageSourceOverload(HarmonyInfo h)
+    {
+        if (h.ArgTypes == null || h.Method == null || (h.MethodType ?? 0) != 0 || TargetType(h) is not TypeDefinition td || !IsGame(td)) return null;
+        var cands = td.Methods.Where(m => m.Name == h.Method).ToList();
+        if (cands.Count == 0 || cands.Any(m => ArgsMatch(m, h.ArgTypes))) return null;
+        return cands.FirstOrDefault(m => m.Parameters.Count == h.ArgTypes.Count + 1 && m.Parameters[^1].ParameterType.FullName == "HealthHandler/DamageSource"
+            && ArgsMatch(m, h.ArgTypes.Append(m.Parameters[^1].ParameterType).ToList()));
+    }
+
+    // CardBar.OnHover without argumentTypes: the game now has OnHover(int) and OnHover(CardBarButton).
+    public bool OnHoverAmbiguous(HarmonyInfo h) =>
+        h.ArgTypes == null && h.Method == "OnHover" && (h.MethodType ?? 0) == 0 && TargetType(h) is TypeDefinition td
+        && td.FullName == "CardBar" && td.Methods.Count(m => m.Name == "OnHover") > 1;
 
     // (parameter, problem, rename-to or null)
     public IEnumerable<(string param, string problem, string? fixTo)> PatchParamProblems(HarmonyInfo h, MethodDefinition patch)

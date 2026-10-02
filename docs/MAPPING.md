@@ -86,6 +86,27 @@ injected-parameter names.
   `PlayerAssigner.RemovePlayer` patch. Old UnboundLib 3.2.14: the same Photon byte→int changes, Steamworks, and
   `CardBar.OnHover` patch params. **Superseded** by staged builds (0 issues).
 
+## 7b. Found by the top-100 Thunderstore sweep (handled since rounds-port 1.2.0)
+
+| Old | New | `fix` |
+|---|---|---|
+| Global `Debug` class in Assembly-CSharp: `Log(string)`, `LogError(string)`, `LogWarning(string)`, `Log(object)`, `DrawLine(...)` | Removed | `UnityEngine.Debug` method with the same name (string params become object) |
+| `UIHandler::ShowJoinGameText(string, Color)` | `ShowJoinGameText(LocalizedString, Color)` | helper: calls it with an empty `LocalizedString`, then `m_localizedJoinGameText.ResetReference(text)` |
+| `UIHandler::DisplayScreenText(Color, string, float)`, `DisplayScreenTextLoop(Color, string)`, `DisplayScreenTextLoop(string)` | `LocalizedString` instead of `string` | same, through `gameOverText.ResetReference(text)` |
+| `Photon.Realtime.Room::GetPlayer(int)` | `GetPlayer(int, bool findMaster)` | passes `false` |
+| `Room::get_PlayerCount()` returns `byte` | returns `int` | new getter + `conv.u1` |
+| `RoomOptions::MaxPlayers` (`byte` field) | `int` field | writes use the int field; reads add `conv.u1` |
+| `TMP_Text::ForceMeshUpdate()` | `ForceMeshUpdate(bool ignoreActiveState, bool forceTextReparsing)` | passes `(false, false)` |
+| `HealthHandler::RPCA_SendTakeDamage(Vector2, Vector2, bool, int)` called directly | + trailing `DamageSource` | passes `DamageSource.Player` |
+| `CardBarButton::card` | public `m_cardInfo` | field reference renamed |
+| `CardInfo::cardName` writes | private field | helper writes it by reflection (REVIEW) |
+| `[HarmonyPatch]` `argumentTypes` of the old `TakeDamage(..., Color, ...)` etc. | + trailing `DamageSource` | appended to `argumentTypes` |
+| `[HarmonyPatch(typeof(CardBar), "OnHover")]` without `argumentTypes` | ambiguous (two overloads) | adds `[HarmonyPatch(new[] { typeof(CardBarButton) })]` (REVIEW) |
+| `typeof(UnityEngine.Input)` / Steamworks types inside `[HarmonyPatch]` | stored as an assembly-qualified name | same retarget as IL type references |
+
+The scanner now also follows HarmonyX: several complete `[HarmonyPatch]` attributes on one method are separate
+targets (`AttributePatch.Create`), not one merged target.
+
 ## 8. Summary: ambiguous or no-equivalent
 
 1. `ChangeColor::Start` (PerformanceImprovements): no equivalent. Delete the patch.

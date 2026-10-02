@@ -78,12 +78,20 @@ When a mod unloads, its patches, cards, menus and events go with it, so the new 
 | `Player.playerID`, `Player.teamID` fields | `PlayerID`, `TeamID` properties | reads use the property. Writes use `SetPlayerID`, or the private `m_teamID` (`AssignTeamID` also syncs Photon) |
 | `CharacterData.maxHealth` field | `MaxHealth` property | reads use the property. Writes use `m_maxHealth` (the setter can unlock an achievement) |
 | `CardInfo.cardName` reads | private, and empty for UnboundLib 4 cards | a helper that falls back to the localized key, `CardName`, then the GameObject name |
-| `CallTakeDamage`, `TakeDamage`, `DoDamage`, `TakeDamageOverTime` | gained a trailing `HealthHandler.DamageSource` | passes `DamageSource.Player` |
+| `CardInfo.cardName` writes | private | writes the private field, so name lookups still find it (REVIEW: the title shown comes from localization) |
+| The old game's own `Debug` class (`Log`, `LogError`, `LogWarning`, `DrawLine`) | removed | `UnityEngine.Debug` |
+| `UIHandler.ShowJoinGameText`, `DisplayScreenText`, `DisplayScreenTextLoop` with a string | take a `LocalizedString` | a helper shows your text as is, untranslated (REVIEW) |
+| `CallTakeDamage`, `TakeDamage`, `DoDamage`, `TakeDamageOverTime`, `RPCA_SendTakeDamage` | gained a trailing `HealthHandler.DamageSource` | passes `DamageSource.Player` |
+| Harmony `argumentTypes` for those methods | no longer match | appends `typeof(HealthHandler.DamageSource)` |
 | Photon RPCs to those methods (`RPCA_SendTakeDamage`) | one more argument | appends `DamageSource.Player` (PUN drops RPCs with the wrong argument count) |
 | `PlayerManager.AddPlayerDiedAction(...)` | removed; `PlayerDiedAction` is a public field | adds the handler to the field |
 | `Optionshandler.vol_Master` / `vol_Sfx` | removed | reads the options slider (REVIEW) |
+| `CardBarButton.card` | `m_cardInfo` | uses it |
+| Harmony patch on `CardBar.OnHover` with no `argumentTypes` | two overloads now: Harmony can't pick | adds `typeof(CardBarButton)`, the hover one (REVIEW) |
+| Photon `Room.GetPlayer(id)`, `Room.PlayerCount`, `RoomOptions.MaxPlayers` | `GetPlayer(id, findMaster)`; byte → int | passes `false`; converts |
+| `TMP_Text.ForceMeshUpdate()` | `ForceMeshUpdate(bool, bool)` | passes `(false, false)`, the old behaviour |
 | `Steamworks.*` in Assembly-CSharp-firstpass | `com.rlabrecque.steamworks.net` | retargets the reference |
-| `UnityEngine.Input` in CoreModule | `UnityEngine.InputLegacyModule` | retargets the reference |
+| `UnityEngine.Input` in CoreModule | `UnityEngine.InputLegacyModule` | retargets the reference, also in `[HarmonyPatch(typeof(Input))]` |
 | `CardChoice.GetRanomCard` | `GetRandomCard` (typo fixed) | Harmony targets and strings |
 | Harmony `___field` / reflection `"field"` that became `m_field` | renamed | renames it (REVIEW) |
 
@@ -100,6 +108,9 @@ The full old → new list, with IL detail: [docs/MAPPING.md](docs/MAPPING.md).
 - On the 12 mods ported for [rounds-mac-modpack](https://github.com/KieranK07/rounds-mac-modpack), `fix` reproduces 8
   byte for byte (Cosmic Rounds, Classes Manager Reborn, RarityLib, ModsPlus, Will's Wacky Map Objects, CardBarPatch,
   GunUnblockablePatch, TemporaryStatsPatch). For the other 4 it fixes the mechanical parts and flags the rest.
+- The 100 most-downloaded Thunderstore mods (October 2026): no crashes, and after `fix` 82 of 98 have nothing left
+  in the report (UnboundLib 3 and RoundsWithFriends 2 are left out: Bknibb's ports replace them). What's left for the
+  other 16 is real work: object pooling, removed RoundsWithFriends UI, Odin Serializer, reflection into the Unity editor.
 - Cards+, KeysCards and ZOMC from Thunderstore: fixed with no MANUAL items, load in game, and swap in and out live.
 - It can't see behaviour changes that still compile (a pooled object reused while you hold it): those show in game.
 

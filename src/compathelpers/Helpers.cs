@@ -95,6 +95,45 @@ public static class __RoundsCompat
         return false;
     }
 
+    // stfld CardInfo::cardName (private now) -> raw write, so CardName() and ModdingUtils' name lookups still see it.
+    // The title the game shows comes from m_localizedCardName.
+    public static void SetCardNameRaw(CardInfo card, string value)
+    {
+        if ((object)card == null) throw new NullReferenceException();
+        if (s_cardName == null) s_cardName = typeof(CardInfo).GetField("cardName", BF);
+        s_cardName.SetValue(card, value);
+    }
+
+    // UIHandler's screen texts take a LocalizedString now. The old string overloads: run the new method with an empty
+    // LocalizedString (it clears the text), then show the raw text, untranslated, through UILocalizedString.
+    public static void ShowJoinGameText(UIHandler ui, string text, Color color)
+    {
+        if ((object)ui == null) throw new NullReferenceException();
+        ui.ShowJoinGameText(new LocalizedString(), color);
+        if (ui.m_localizedJoinGameText != null) ui.m_localizedJoinGameText.ResetReference(text);
+    }
+
+    public static void DisplayScreenText(UIHandler ui, Color color, string text, float speed)
+    {
+        if ((object)ui == null) throw new NullReferenceException();
+        ui.DisplayScreenText(color, new LocalizedString(), speed);
+        if (ui.gameOverText != null) ui.gameOverText.ResetReference(text);
+    }
+
+    public static void DisplayScreenTextLoop(UIHandler ui, Color color, string text)
+    {
+        if ((object)ui == null) throw new NullReferenceException();
+        ui.DisplayScreenTextLoop(color, new LocalizedString());
+        if (ui.gameOverText != null) ui.gameOverText.ResetReference(text);
+    }
+
+    public static void DisplayScreenTextLoopNoColor(UIHandler ui, string text)
+    {
+        if ((object)ui == null) throw new NullReferenceException();
+        ui.DisplayScreenTextLoop(new LocalizedString());
+        if (ui.gameOverText != null) ui.gameOverText.ResetReference(text);
+    }
+
     // PlayerManager.AddPlayerDiedAction(action) was removed; PlayerDiedAction is a public field now.
     public static void AddPlayerDiedAction(PlayerManager manager, Action<Player, int> action)
     {

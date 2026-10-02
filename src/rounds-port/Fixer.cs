@@ -152,19 +152,50 @@ sealed class Fixer
                         ReplaceWith(il, ins, Instruction.Create(OpCodes.Ldstr, k), Instruction.Create(OpCodes.Call, Helper("GetVolume")));
                         Count($"read Optionshandler.{f.Name} -> options slider \"{k}\"");
                     }
+                    else if (IsGameField(f, "CardBarButton", "card") && f.Resolve() == null)
+                    {
+                        ins.Operand = M.ImportReference(GT("CardBarButton").Fields.Single(x => x.Name == "m_cardInfo"));
+                        Count("CardBarButton.card -> m_cardInfo");
+                    }
+                    else if (IsGameField(f, "CardInfo", "cardName") && st)
+                    {
+                        ReplaceWith(il, ins, Instruction.Create(OpCodes.Call, Helper("SetCardNameRaw")));
+                        Count("write CardInfo.cardName -> __RoundsCompat.SetCardNameRaw");
+                    }
                     else if (IsGameField(f, "CardInfo", "cardName"))
-                        Notes.Add($"MANUAL {md.FullName}: writes CardInfo.cardName (private now; names come from localization)");
+                        Notes.Add($"MANUAL {md.FullName}: {ins.OpCode} on CardInfo.cardName; left as is");
+                    else if (f.DeclaringType.FullName == "Photon.Realtime.RoomOptions" && f.Name == "MaxPlayers" && f.FieldType.FullName == "System.Byte" && f.Resolve() == null)
+                    {
+                        // byte -> int. A byte on the IL stack is already an int32, so writes only need the new field.
+                        var nf = M.ImportReference(f.DeclaringType.Resolve().Fields.Single(x => x.Name == "MaxPlayers"));
+                        if (st) { ins.Operand = nf; Count("write RoomOptions.MaxPlayers: byte -> int"); }
+                        else if (ld) { ReplaceWith(il, ins, Instruction.Create(OpCodes.Ldfld, nf), Instruction.Create(OpCodes.Conv_U1)); Count("read RoomOptions.MaxPlayers: int, converted to the old byte"); }
+                        else Notes.Add($"MANUAL {md.FullName}: {ins.OpCode} on RoomOptions.MaxPlayers (now an int); left as is");
+                    }
                 }
+                else if (ins.Operand is MethodReference pm && (ins.OpCode == OpCodes.Call || ins.OpCode == OpCodes.Callvirt) && OtherCall(il, ins, pm)) { }
                 else if (ins.Operand is MethodReference mr && (ins.OpCode == OpCodes.Call || ins.OpCode == OpCodes.Callvirt) && mr.DeclaringType.Scope.Name.StartsWith("Assembly-CSharp"))
                 {
                     var dt = mr.DeclaringType.FullName;
+                    if (dt == "Debug" && mr.Resolve() == null && UnityDebug(mr) is MethodReference ud)
+                    {
+                        ins.OpCode = OpCodes.Call; ins.Operand = ud;
+                        Count($"Debug.{mr.Name} (the old game's own Debug class) -> UnityEngine.Debug.{mr.Name}");
+                        continue;
+                    }
+                    if (dt == "UIHandler" && mr.Resolve() == null && UiTextHelper(mr) is string h)
+                    {
+                        ReplaceWith(il, ins, Instruction.Create(OpCodes.Call, Helper(h)));
+                        Count($"UIHandler.{mr.Name}(string) -> __RoundsCompat.{h} (shows the text untranslated)");
+                        continue;
+                    }
                     if (dt == "PlayerManager" && mr.Name == "AddPlayerDiedAction" && mr.Parameters.Count == 1 && mr.Resolve() == null)
                     {
                         ReplaceWith(il, ins, Instruction.Create(OpCodes.Call, Helper("AddPlayerDiedAction")));
                         Count("PlayerManager.AddPlayerDiedAction(...) -> PlayerDiedAction += ...");
                         continue;
                     }
-                    if ((dt is "Damagable" or "HealthHandler" or "DamageOverTime") && mr.Name is "CallTakeDamage" or "TakeDamage" or "DoDamage" or "TakeDamageOverTime"
+                    if ((dt is "Damagable" or "HealthHandler" or "DamageOverTime") && mr.Name is "CallTakeDamage" or "TakeDamage" or "DoDamage" or "TakeDamageOverTime" or "RPCA_SendTakeDamage"
                         && mr.Resolve() == null)
                     {
                         var target = GT(dt).Methods.SingleOrDefault(x => x.Name == mr.Name && x.Parameters.Count == mr.Parameters.Count + 1
@@ -180,6 +211,60 @@ sealed class Fixer
         }
     }
 
+    static string Sig(MethodReference m) => string.Join(",", m.Parameters.Select(p => p.ParameterType.Name));
+
+    // Library calls whose signature changed in the 2025 build (Photon, TextMeshPro). True when `ins` was rewritten.
+    bool OtherCall(ILProcessor il, Instruction ins, MethodReference mr)
+    {
+        var dt = mr.DeclaringType.FullName;
+        if (dt is not ("Photon.Realtime.Room" or "TMPro.TMP_Text" or "TMPro.TextMeshProUGUI" or "TMPro.TextMeshPro")) return false;
+        MethodDefinition? Find(string name, string sig)
+        {
+            for (var t = mr.DeclaringType.Resolve(); t != null; t = t.BaseType?.Resolve())
+                if (t.Methods.FirstOrDefault(x => x.Name == name && Sig(x) == sig) is MethodDefinition d) return d;
+            return null;
+        }
+        if (mr.Resolve() != null) return false;
+        switch (mr.Name, Sig(mr))
+        {
+            case ("GetPlayer", "Int32") when Find("GetPlayer", "Int32,Boolean") is MethodDefinition gp:
+                ReplaceWith(il, ins, Instruction.Create(OpCodes.Ldc_I4_0), Instruction.Create(ins.OpCode, M.ImportReference(gp)));
+                Count("Room.GetPlayer(id) -> GetPlayer(id, findMaster: false)");
+                return true;
+            case ("get_PlayerCount", "") when mr.ReturnType.FullName == "System.Byte" && Find("get_PlayerCount", "") is MethodDefinition pc:
+                ReplaceWith(il, ins, Instruction.Create(ins.OpCode, M.ImportReference(pc)), Instruction.Create(OpCodes.Conv_U1));
+                Count("Room.PlayerCount: int, converted to the old byte");
+                return true;
+            case ("ForceMeshUpdate", "") when Find("ForceMeshUpdate", "Boolean,Boolean") is MethodDefinition fm:
+                ReplaceWith(il, ins, Instruction.Create(OpCodes.Ldc_I4_0), Instruction.Create(OpCodes.Ldc_I4_0), Instruction.Create(ins.OpCode, M.ImportReference(fm)));
+                Count("TMP_Text.ForceMeshUpdate() -> ForceMeshUpdate(false, false)");
+                return true;
+        }
+        return false;
+    }
+
+    // The old game had its own global Debug class (Log, LogError, LogWarning, DrawLine). UnityEngine.Debug has the
+    // same methods; string parameters there are object.
+    MethodReference? UnityDebug(MethodReference mr)
+    {
+        var core = M.AssemblyResolver.Resolve(new AssemblyNameReference("UnityEngine.CoreModule", new Version(0, 0, 0, 0)));
+        var d = core.MainModule.GetType("UnityEngine.Debug");
+        var hit = d?.Methods.FirstOrDefault(x => x.IsStatic && x.Name == mr.Name && x.Parameters.Count == mr.Parameters.Count
+            && x.Parameters.Select(p => p.ParameterType).Zip(mr.Parameters.Select(p => p.ParameterType))
+                .All(z => z.First.FullName == z.Second.FullName || z.First.FullName == "System.Object" && !z.Second.IsValueType));
+        return hit == null ? null : M.ImportReference(hit);
+    }
+
+    // UIHandler's screen-text methods take a LocalizedString now; the old string overloads go through a helper.
+    static string? UiTextHelper(MethodReference mr) => (mr.Name, Sig(mr)) switch
+    {
+        ("ShowJoinGameText", "String,Color") => "ShowJoinGameText",
+        ("DisplayScreenText", "Color,String,Single") => "DisplayScreenText",
+        ("DisplayScreenTextLoop", "Color,String") => "DisplayScreenTextLoop",
+        ("DisplayScreenTextLoop", "String") => "DisplayScreenTextLoopNoColor",
+        _ => null
+    };
+
     void RetargetScopes()
     {
         AssemblyNameReference Ref(string name)
@@ -191,14 +276,25 @@ sealed class Fixer
             M.AssemblyReferences.Add(r);
             return r;
         }
-        foreach (var tr in M.GetTypeReferences().ToList())
+        void Retarget(TypeReference tr, string where)
         {
-            if (tr.Scope is not AssemblyNameReference an) continue;
+            if (tr.Scope is not AssemblyNameReference an) return;
             if (an.Name == "Assembly-CSharp-firstpass" && tr.Namespace == "Steamworks")
-            { tr.Scope = Ref("com.rlabrecque.steamworks.net"); Count($"type {tr.FullName}: Assembly-CSharp-firstpass -> com.rlabrecque.steamworks.net"); }
+            { tr.Scope = Ref("com.rlabrecque.steamworks.net"); Count($"{where}{tr.FullName}: Assembly-CSharp-firstpass -> com.rlabrecque.steamworks.net"); }
             else if (an.Name == "UnityEngine.CoreModule" && tr.FullName == "UnityEngine.Input")
-            { tr.Scope = Ref("UnityEngine.InputLegacyModule"); Count("type UnityEngine.Input: UnityEngine.CoreModule -> UnityEngine.InputLegacyModule"); }
+            { tr.Scope = Ref("UnityEngine.InputLegacyModule"); Count($"{where}UnityEngine.Input: UnityEngine.CoreModule -> UnityEngine.InputLegacyModule"); }
         }
+        foreach (var tr in M.GetTypeReferences().ToList()) Retarget(tr, "type ");
+        // typeof(...) in Harmony attributes is stored as an assembly-qualified name, so it needs the same change.
+        foreach (var t in Scanner.AllTypes(M))
+            foreach (var holder in new ICustomAttributeProvider[] { t }.Concat(t.Methods))
+                foreach (var ca in holder.CustomAttributes.Where(a => a.AttributeType.Name == "HarmonyPatch"))
+                    foreach (var arg in ca.ConstructorArguments)
+                    {
+                        if (arg.Value is TypeReference tr) Retarget(tr, "[HarmonyPatch] typeof ");
+                        else if (arg.Value is CustomAttributeArgument[] arr)
+                            foreach (var a in arr) if (a.Value is TypeReference tr2) Retarget(tr2, "[HarmonyPatch] typeof ");
+                    }
     }
 
     // RPCs to game methods that gained a trailing DamageSource: append DamageSource.Player to the argument array.
@@ -225,10 +321,54 @@ sealed class Fixer
     }
 
     // ---------------------------------------------------------------- Harmony and reflection renames
+    // [HarmonyPatch] targets that only need different argumentTypes: a damage method that gained a trailing
+    // DamageSource, and CardBar.OnHover, which now has two overloads (the hover one takes a CardBarButton).
+    void HarmonyTargets(TypeDefinition t)
+    {
+        static IEnumerable<CustomAttribute> Patches(ICustomAttributeProvider p) => p.CustomAttributes.Where(a => a.AttributeType.Name == "HarmonyPatch");
+        foreach (var (info, methods) in scanner.HarmonyPatches(t).ToList())
+        {
+            if (scanner.DamageSourceOverload(info) != null)
+            {
+                // the attribute holding argumentTypes: the patch method's own, else the class's
+                foreach (var holder in methods.Cast<ICustomAttributeProvider>().Append(t))
+                {
+                    var hit = Patches(holder).SelectMany(a => a.ConstructorArguments.Select((arg, i) => (a, arg, i)))
+                        .FirstOrDefault(x => x.arg.Value is CustomAttributeArgument[] arr && arr.Length == info.ArgTypes!.Count
+                            && arr.Select(e => (e.Value as TypeReference)?.FullName).SequenceEqual(info.ArgTypes.Select(a => a.FullName)));
+                    if (hit.a == null) continue;
+                    var types = (CustomAttributeArgument[])hit.arg.Value;
+                    var dmg = M.ImportReference(GT("HealthHandler").NestedTypes.Single(n => n.Name == "DamageSource"));
+                    hit.a.ConstructorArguments[hit.i] = new CustomAttributeArgument(hit.arg.Type, types.Append(new CustomAttributeArgument(types[0].Type, dmg)).ToArray());
+                    Count($"[HarmonyPatch] {t.Name}: {info.Method} argumentTypes + HealthHandler.DamageSource");
+                    break;
+                }
+            }
+            else if (scanner.OnHoverAmbiguous(info))
+            {
+                ICustomAttributeProvider holder = methods.Count == 1 && Patches(methods[0]).Any() ? methods[0] : t;
+                var src = Patches(holder).FirstOrDefault() ?? Patches(t).First();
+                if (!src.AttributeType.Resolve().Methods.Any(m => m.IsConstructor && !m.IsStatic && m.Parameters.Count == 1
+                    && m.Parameters[0].ParameterType.FullName == "System.Type[]")) continue;
+                // Built from the mod's own Harmony and corlib references: importing the resolved constructor would add
+                // a second reference to whatever Harmony and mscorlib versions rounds-port read.
+                var type = new TypeReference("System", "Type", M, M.TypeSystem.CoreLibrary);
+                var ctor = new MethodReference(".ctor", M.TypeSystem.Void, src.AttributeType) { HasThis = true };
+                ctor.Parameters.Add(new ParameterDefinition(new ArrayType(type)));
+                var ca = new CustomAttribute(ctor);
+                ca.ConstructorArguments.Add(new CustomAttributeArgument(new ArrayType(type), new[] { new CustomAttributeArgument(type, M.ImportReference(GT("CardBarButton"))) }));
+                holder.CustomAttributes.Add(ca);
+                Count($"[HarmonyPatch] {t.Name}: CardBar.OnHover -> argumentTypes {{ typeof(CardBarButton) }}");
+            }
+        }
+    }
+
     void Renames()
     {
         foreach (var t in Scanner.AllTypes(M).ToList())
         {
+            HarmonyTargets(t);
+
             foreach (var holder in new ICustomAttributeProvider[] { t }.Concat(t.Methods))
                 foreach (var ca in holder.CustomAttributes.Where(a => a.AttributeType.Name == "HarmonyPatch"))
                     for (int i = 0; i < ca.ConstructorArguments.Count; i++)
