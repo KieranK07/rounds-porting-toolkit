@@ -106,6 +106,10 @@ match; reflection by name that finds nothing; overrides broken by a changed base
 changes (object pooling, `TrickShot` setup moved to `Start`, Odin Serializer no longer shipped with the game).
 The full old → new list, with IL detail: [docs/MAPPING.md](docs/MAPPING.md).
 
+Asset bundles the mod ships are checked too: game scripts that are gone, saved fields the game dropped, cards and card
+frames saved before localization, and shaders that draw pink on macOS.
+[Porting guide: asset bundles](docs/PORTING.md#asset-bundles).
+
 ## How well it works
 
 - On the 12 mods ported for [rounds-mac-modpack](https://github.com/KieranK07/rounds-mac-modpack), `fix` reproduces 8
@@ -161,7 +165,8 @@ Issues and pull requests welcome.
 
 ## Credits
 
-Built with [Mono.Cecil](https://github.com/jbevain/cecil) (MIT). Hot Reload is modelled on BepInEx's
+Built with [Mono.Cecil](https://github.com/jbevain/cecil) (MIT) and
+[AssetsTools.NET](https://github.com/nesrak1/AssetsTools.NET) (MIT, reads asset bundles). Hot Reload is modelled on BepInEx's
 [ScriptEngine](https://github.com/BepInEx/BepInEx.Debug). Ported mods depend on [Bknibb](https://github.com/Bknibb)'s
 UnboundLib and RoundsWithFriends updates for v1.1.2. MIT license ([LICENSE](LICENSE)). ROUNDS is © Landfall Games;
 not affiliated with Landfall.

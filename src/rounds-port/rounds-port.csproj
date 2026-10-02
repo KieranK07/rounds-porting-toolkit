@@ -11,6 +11,11 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Mono.Cecil" Version="0.11.6" />
+    <!-- reads Unity asset bundles (scan checks the ones mods ship) -->
+    <PackageReference Include="AssetsTools.NET" Version="3.0.5" />
+    <!-- Assembly-CSharp type names of the old game (pre-2025), from its MMHOOK hook list: tells a bundle's missing
+         script that was already missing before the update from one the update removed -->
+    <EmbeddedResource Include="data/old-game-types.txt" LogicalName="old-game-types.txt" />
     <!-- src/compathelpers, prebuilt so building this doesn't need the game; its methods get cloned into fixed mods -->
     <EmbeddedResource Include="helpers/compathelpers.dll" LogicalName="compathelpers.dll" />
     <!-- src/HotReload, prebuilt (it needs the game to compile); install-hotreload writes these into the game -->

@@ -120,7 +120,8 @@ public static Ported Port(string dll, Game game, Scanner scanner, bool fix, stri
     return new(issues, scanner.Scan(ModuleDefinition.ReadModule(dest, rp)), fixer, dest);
 }
 
-// Files as given; folders: every DLL inside that references the game (skips libraries like Odin or MMHOOK).
+// Files as given; folders: every DLL inside that references the game or UnboundLib (a map pack can be only an asset
+// bundle and UnboundLib calls); skips libraries like Odin or MMHOOK.
 public static IEnumerable<string> Expand(List<string> inputs)
 {
     foreach (var i in inputs)
@@ -130,7 +131,7 @@ public static IEnumerable<string> Expand(List<string> inputs)
         foreach (var f in Directory.GetFiles(i, "*.dll", SearchOption.AllDirectories).Where(f => !f.Contains(Path.DirectorySeparatorChar + "ported" + Path.DirectorySeparatorChar)).OrderBy(f => f))
         {
             bool game;
-            try { using var m = ModuleDefinition.ReadModule(f); game = m.AssemblyReferences.Any(a => a.Name == "Assembly-CSharp") && !m.Name.StartsWith("MMHOOK"); }
+            try { using var m = ModuleDefinition.ReadModule(f); game = m.AssemblyReferences.Any(a => a.Name is "Assembly-CSharp" or "UnboundLib") && !m.Name.StartsWith("MMHOOK"); }
             catch { continue; }
             if (game) yield return f;
         }
