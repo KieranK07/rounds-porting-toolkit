@@ -3,7 +3,8 @@
 `rounds-port sweep` runs scan and fix on real mods: the 100 most-downloaded Thunderstore mods with DLLs, pinned to
 the versions in `sweep-packages.tsv` (the old UnboundLib 3 and RoundsWithFriends 2 are left out, since Bknibb's ports
 replace them). Mods are downloaded once into the rounds-port cache (`%LOCALAPPDATA%\rounds-port\sweep` on Windows,
-`~/Library/Application Support/rounds-port/sweep` on macOS, `~/.local/share/rounds-port/sweep` on Linux); nothing is committed here but the list and the results.
+`~/Library/Application Support/rounds-port/sweep` on macOS, `~/.local/share/rounds-port/sweep` on Linux). Only the list
+and the results are committed here.
 
 Before and after changing `src/rounds-port`:
 
