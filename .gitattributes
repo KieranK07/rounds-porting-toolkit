@@ -1,0 +1,4 @@
+# LF everywhere, so builds give the same bytes on Windows and macOS (source text feeds the .pdb checksums).
+* text=auto eol=lf
+*.dll binary
+*.pdb binary

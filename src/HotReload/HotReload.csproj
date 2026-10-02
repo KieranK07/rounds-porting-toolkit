@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>HotReload</AssemblyName>
+    <RootNamespace>RoundsHotReload</RootNamespace>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net472" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="$(GameDir)/BepInEx/core/BepInEx.dll" Private="false" />
+    <Reference Include="$(GameDir)/BepInEx/core/0Harmony.dll" Private="false" />
+    <Reference Include="$(GameDir)/BepInEx/core/Mono.Cecil.dll" Private="false" />
+    <Reference Include="$(GameDir)/BepInEx/core/MonoMod.RuntimeDetour.dll" Private="false" />
+    <Reference Include="$(GameDir)/BepInEx/core/MonoMod.Utils.dll" Private="false" />
+    <Reference Include="$(Managed)/UnityEngine.dll" Private="false" />
+    <Reference Include="$(Managed)/Assembly-CSharp.dll" Private="false" />
+    <Reference Include="$(Managed)/UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(Managed)/UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="$(Managed)/UnityEngine.AssetBundleModule.dll" Private="false" />
+    <Reference Include="$(Managed)/netstandard.dll" Private="false" />
+  </ItemGroup>
+  <!-- dotnet build -c Release -p:Deploy=true : copy into the game's BepInEx/plugins (takes effect next launch).
+       -p:UpdateEmbedded=true : also refresh the copy built into rounds-port (install-hotreload ships that one). -->
+  <Target Name="Deploy" AfterTargets="Build" Condition="'$(Deploy)' == 'true'">
+    <ItemGroup><Out Include="$(TargetDir)$(AssemblyName).dll;$(TargetDir)$(AssemblyName).pdb" /></ItemGroup>
+    <Copy SourceFiles="@(Out)" DestinationFolder="$(GameDir)/BepInEx/plugins/HotReload" />
+  </Target>
+  <Target Name="UpdateEmbedded" AfterTargets="Build" Condition="'$(UpdateEmbedded)' == 'true'">
+    <ItemGroup><Emb Include="$(TargetDir)$(AssemblyName).dll;$(TargetDir)$(AssemblyName).pdb" /></ItemGroup>
+    <Copy SourceFiles="@(Emb)" DestinationFolder="$(MSBuildProjectDirectory)/../rounds-port/embedded" />
+  </Target>
+</Project>

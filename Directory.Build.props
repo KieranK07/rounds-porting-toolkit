@@ -1,0 +1,18 @@
+<Project>
+  <!-- Where ROUNDS is installed. Only HotReload and compathelpers need it (they compile against the game's DLLs);
+       rounds-port itself builds without the game. Steam somewhere else: dotnet build -p:GameDir="D:\SteamLibrary\steamapps\common\ROUNDS" -->
+  <PropertyGroup>
+    <GameDir Condition="'$(GameDir)' == '' And '$(OS)' == 'Windows_NT'">C:\Program Files (x86)\Steam\steamapps\common\ROUNDS</GameDir>
+    <GameDir Condition="'$(GameDir)' == '' And $([MSBuild]::IsOSPlatform('OSX'))">$(HOME)/Library/Application Support/Steam/steamapps/common/ROUNDS</GameDir>
+    <GameDir Condition="'$(GameDir)' == ''">$(HOME)/.local/share/Steam/steamapps/common/ROUNDS</GameDir>
+    <Managed Condition="'$(Managed)' == '' And Exists('$(GameDir)/ROUNDS.app')">$(GameDir)/ROUNDS.app/Contents/Resources/Data/Managed</Managed>
+    <Managed Condition="'$(Managed)' == ''">$(GameDir)/ROUNDS_Data/Managed</Managed>
+  </PropertyGroup>
+  <!-- Same bytes from any machine or checkout: no commit hash or SourceLink, source paths mapped. -->
+  <PropertyGroup>
+    <Deterministic>true</Deterministic>
+    <EnableSourceControlManagerQueries>false</EnableSourceControlManagerQueries>
+    <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
+    <PathMap>$(MSBuildProjectDirectory)=/_/$(MSBuildProjectName)</PathMap>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <RollForward>Major</RollForward>
+    <AssemblyName>rounds-port</AssemblyName>
+    <Version>1.1.0</Version>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Mono.Cecil" Version="0.11.6" />
+    <!-- src/compathelpers, prebuilt so building this doesn't need the game; its methods get cloned into fixed mods -->
+    <EmbeddedResource Include="helpers/compathelpers.dll" LogicalName="compathelpers.dll" />
+    <!-- src/HotReload, prebuilt (it needs the game to compile); install-hotreload writes these into the game -->
+    <EmbeddedResource Include="embedded/HotReload.dll" LogicalName="HotReload.dll" />
+    <EmbeddedResource Include="embedded/HotReload.pdb" LogicalName="HotReload.pdb" />
+  </ItemGroup>
+</Project>
