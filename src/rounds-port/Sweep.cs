@@ -31,7 +31,7 @@ static class Sweep
         // Every package's DLLs are references for every other (cards use ModdingUtils, RarityLib...), except the old
         // UnboundLib 3 and RoundsWithFriends 2: mods are checked against Bknibb's ports, as players run them.
         var refs = dirs.Where(d => !Game.OldPackages.Contains(d.name)).Select(d => d.dir).ToList();
-        var game = new Game(gameDir, refs, Array.Empty<string>());
+        var game = new Game(gameDir, refs, Array.Empty<string>(), installedMods: false);
         game.EnsureRoundsWithFriends3();
         game.EnsureDependencies(dirs.SelectMany(d => Program.Expand(new() { d.dir })).ToList());
         Out.Line($"game: {game.Dir}");

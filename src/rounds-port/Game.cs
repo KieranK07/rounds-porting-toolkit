@@ -13,7 +13,8 @@ sealed class Game
     // Old packages that are known not to work on the 2025 build and would shadow their replacements.
     public static readonly string[] OldPackages = { "willis81808-UnboundLib", "willis81808-MMHook", "olavim-RoundsWithFriends" };
 
-    public Game(string? dir, IEnumerable<string> refs, IEnumerable<string> inputs)
+    // installedMods: false leaves out BepInEx/plugins and mod-manager profiles (sweep: same results on every machine).
+    public Game(string? dir, IEnumerable<string> refs, IEnumerable<string> inputs, bool installedMods = true)
     {
         Dir = dir ?? Find() ?? throw new UserError(
             "Couldn't find ROUNDS. Pass its folder with --game <path> (the folder that has ROUNDS.app or Rounds_Data).");
@@ -25,9 +26,9 @@ sealed class Game
         foreach (var r in refs) AddTree(r, skipOld: false);
         foreach (var i in inputs) AddTree(Directory.Exists(i) ? i : Path.GetDirectoryName(Path.GetFullPath(i))!, skipOld: false);
         var plugins = Path.Combine(Dir, "BepInEx", "plugins");
-        if (Directory.Exists(plugins)) AddTree(plugins, skipOld: true);
+        if (installedMods && Directory.Exists(plugins)) AddTree(plugins, skipOld: true);
         // Mod-manager profiles (r2modman, Thunderstore Mod Manager, Gale) keep mods outside the game folder.
-        var profiles = ModManagerProfiles().ToList();
+        var profiles = installedMods ? ModManagerProfiles().ToList() : new();
         foreach (var p in profiles) AddTree(p.plugins, skipOld: true);
         if (profiles.Count > 0)
             Out.Note("also reading mods from " + string.Join(", ", profiles.Select(p => $"{p.manager} profile \"{p.profile}\"")));

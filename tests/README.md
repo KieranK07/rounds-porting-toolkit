@@ -19,8 +19,8 @@ so check that every change is one you meant. When they all are, save the new res
 
 - Fixed DLLs are byte-identical on Windows, macOS and Linux, so the saved hashes hold on any machine with the current
   game (v1.1.2).
-- The grades can differ if your game has other mods in `BepInEx\plugins`: they're used to check what mods reference.
-  The saved results come from a game with [rounds-mac-modpack](https://github.com/KieranK07/rounds-mac-modpack).
+- It reads only the game, BepInEx's core and the packages in the list (plus the libraries they use, from Thunderstore),
+  never the mods you have installed, so the grades are the same on every machine too.
 - `--top 100` makes a fresh list from Thunderstore's current top 100 (and their current versions).
 - Passing the sweep says rounds-port handles these mods the way it did before, not that they work in game. Test
   changed rewrites in game too ([Hot Reload](../docs/HOTRELOAD.md) makes that quick).
