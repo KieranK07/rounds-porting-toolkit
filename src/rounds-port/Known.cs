@@ -26,8 +26,10 @@ static class Known
     {
         var type = dt.FullName; var name = m.Name;
         var what = $"{(m is FieldReference ? "field" : "method")} {type}::{name}";
-        if (m is FieldReference)
+        if (m is FieldReference fr)
         {
+            if (type == "UnityEngine.UIVertex" && name.StartsWith("uv") && fr.FieldType.FullName == "UnityEngine.Vector2")
+                return new(Fix.Auto, "field", what, "a Vector2 in Unity 2018, a Vector4 in Unity 2022; fix reads and writes it through Vector4's conversions (x, y kept)");
             switch (type, name)
             {
                 case ("Player", "playerID"): return new(Fix.Auto, "field", what, "now the PlayerID property (reads) and SetPlayerID() (writes)");
@@ -63,6 +65,19 @@ static class Known
                 return new(Fix.Auto, "method", what, "the typo was fixed: GetRandomCard");
         }
         return new(Fix.Manual, m is FieldReference ? "field" : "method", what, why);
+    }
+
+    // RPCs with the same parameters as on the old game: a wrong argument count there is an old bug in the mod.
+    static readonly Dictionary<string, string> UnchangedRpcs = new() { ["RPCA_AddSlow"] = "(float slowToAdd, bool isFastSlow)" };
+
+    public static string RpcNote(Scanner.RpcSite r)
+    {
+        var note = "";
+        if (r.Targets.Count == 1 && r.Args < r.Targets[0].Parameters.Count && r.Targets[0].Parameters.Skip(r.Args).All(p => p.HasDefault || p.IsOptional))
+            note += ". The missing parameters have C# defaults, but PUN matches the exact argument count and doesn't fill them in";
+        if (UnchangedRpcs.TryGetValue(r.Name, out var sig))
+            note += $". Not from the update: the old game's {r.Name} took {sig} too, so this call was dropped there as well. Pass every argument to make it work";
+        return note;
     }
 
     public static Issue HarmonyTarget(HarmonyInfo h, string problem, bool damageSource)

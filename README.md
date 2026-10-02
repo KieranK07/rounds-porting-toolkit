@@ -90,6 +90,7 @@ When a mod unloads, its patches, cards, menus and events go with it, so the new 
 | Harmony patch on `CardBar.OnHover` with no `argumentTypes` | two overloads now: Harmony can't pick | adds `typeof(CardBarButton)`, the hover one (REVIEW) |
 | Photon `Room.GetPlayer(id)`, `Room.PlayerCount`, `RoomOptions.MaxPlayers` | `GetPlayer(id, findMaster)`; byte → int | passes `false`; converts |
 | `TMP_Text.ForceMeshUpdate()` | `ForceMeshUpdate(bool, bool)` | passes `(false, false)`, the old behaviour |
+| `UIVertex.uv0`…`uv3` | Vector2 → Vector4 (Unity 2022) | converts on read and write |
 | `Steamworks.*` in Assembly-CSharp-firstpass | `com.rlabrecque.steamworks.net` | retargets the reference |
 | `UnityEngine.Input` in CoreModule | `UnityEngine.InputLegacyModule` | retargets the reference, also in `[HarmonyPatch(typeof(Input))]` |
 | `CardChoice.GetRanomCard` | `GetRandomCard` (typo fixed) | Harmony targets and strings |
