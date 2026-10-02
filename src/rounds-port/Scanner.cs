@@ -86,6 +86,7 @@ sealed class Scanner(Game game)
                 }
             }
         }
+        foreach (var i in Bundles.Check(module, game, Unchecked)) Add(i);
         return issues;
     }
 

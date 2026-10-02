@@ -75,6 +75,25 @@ never exist together), so keep a branch per game version, or reach the changed m
   the UnboundLib on Thunderstore is still 3.x.
 - Keep your `BepInDependency` on `com.willis.rounds.unbound`: UnboundLib 4 kept the same GUID.
 
+## Asset bundles
+
+`scan` also reads the Unity asset bundles a mod ships (embedded in the DLL, or a bundle file next to it that the mod
+loads). Components in a bundle are saved against the game's scripts by name, so it checks every component that uses a
+game or library script:
+
+- **Scripts the game no longer has** (MANUAL): the component comes up missing when the bundle loads. Scripts the old
+  game didn't have either (Stick Fight leftovers, PUN's `PhotonView` saved as if it were in Assembly-CSharp) are only
+  a note: they were already missing.
+- **Saved fields the current script no longer has**, by name and type (MANUAL): the value is lost on load. In the top
+  100 Thunderstore mods there are none; the update kept the fields bundles use.
+- **Cards and card frames saved before localization** (REVIEW). The game now shows card text from localization.
+  Cards registered through UnboundLib 4's `CustomCard.BuildUnityCard` get theirs filled in; others may show no text.
+  A custom card frame (`CardInfoDisplayer`) without `m_localizedNameText` throws when a card is drawn with it: rebuild
+  it with `UILocalizedString` text, or use the game's frame.
+- **Shaders without a Metal version** (a note): they draw pink on macOS. Build the bundle for macOS too if you can.
+
+Unity's own components (TextMeshPro, UI) are left to Unity, which upgrades their saved data itself.
+
 ## What rounds-port can't see
 
 - Behaviour changes that still compile and resolve. Known ones it warns about: object pooling
@@ -83,5 +102,5 @@ never exist together), so keep a branch per game version, or reach the changed m
 - Clashes between mods at runtime. Example: UnboundLib 4's card-pick stats panel calls `ResetStats` on components
   that aren't on any GameObject; a `ResetStats` prefix that calls `GetComponent` throws there. Guard patches that may
   run on such objects (`if (__instance == null) return;` is true for them in Unity).
-- Asset bundles: they're fine on Windows. On macOS, bundles built for Windows only have DirectX shaders (pink text and
-  effects); build them for both platforms if you can.
+- Whether a bundle's contents look right in game: the [asset bundle check](#asset-bundles) reads what's saved, not
+  how it renders.
