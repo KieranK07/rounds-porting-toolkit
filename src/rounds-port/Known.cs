@@ -3,11 +3,13 @@ using Mono.Cecil;
 // What changed in the 2025 ROUNDS build (Unity 2022.3), and whether `fix` handles it. Source: docs/MAPPING.md.
 static class Known
 {
-    static readonly string[] DamageMethods = { "CallTakeDamage", "TakeDamage", "DoDamage", "TakeDamageOverTime", "RPCA_SendTakeDamage" };
+    static readonly string[] DamageMethods = { "CallTakeDamage", "TakeDamage", "DoDamage", "TakeDamageOverTime", "DoDamageOverTime", "RPCA_SendTakeDamage" };
 
-    public static Issue Type(TypeReference t, string scope, string why)
+    public static Issue Type(TypeReference t, string scope, string why, string? movedTo = null)
     {
         var name = t.FullName;
+        if (movedTo != null)
+            return new(Fix.Auto, "type", $"[{scope}] {name}", $"Unity 2022 split {scope} up; the type is in {movedTo} now, and fix points the reference there");
         if (scope == "Assembly-CSharp-firstpass" && t.Namespace == "Steamworks")
             return new(Fix.Auto, "type", $"[{scope}] {name}", "Steamworks moved to com.rlabrecque.steamworks.net (same types and members)");
         if (scope == "UnityEngine.CoreModule" && name == "UnityEngine.Input")
@@ -25,7 +27,7 @@ static class Known
         return new(Fix.Manual, "type", $"[{scope}] {name}", why);
     }
 
-    public static Issue Member(MemberReference m, TypeDefinition dt, string why)
+    public static Issue Member(MemberReference m, TypeDefinition dt, string why, bool resultDropped = false)
     {
         var type = dt.FullName; var name = m.Name;
         var what = $"{(m is FieldReference ? "field" : "method")} {type}::{name}";
@@ -39,6 +41,7 @@ static class Known
                 case ("Player", "teamID"): return new(Fix.Auto, "field", what, "now the TeamID property; writes go to the private m_teamID (AssignTeamID also syncs Photon, so fix avoids it)");
                 case ("CharacterData", "maxHealth"): return new(Fix.Auto, "field", what, "now the MaxHealth property; writes go to m_maxHealth because the setter can unlock an achievement");
                 case ("Optionshandler", "vol_Master" or "vol_Sfx"): return new(Fix.Review, "field", what, "the volume statics were removed; fix reads the options slider (0..1) instead");
+                case ("Optionshandler", "lockMouse" or "lockStick"): return new(Fix.Auto, "field", what, $"removed; the game reads the option {(name == "lockMouse" ? "OPTION_MOUSE_AIM8DIR" : "OPTION_CONTROLLER_AIM8DIR")} (aim in 8 directions) instead, and fix reads the same");
                 case ("Optionshandler", _): return new(Fix.Manual, "field", what, "Optionshandler statics were replaced by OptionsData settings (m_key, CurrentValueSliderNormalized)");
                 case ("CardBar", "ci"): return new(Fix.Manual, "field", what, "removed: CardBar no longer caches cards. See docs/MAPPING.md section 4");
                 case ("CardBar", "source"): return new(Fix.Manual, "field", what, "renamed m_source");
@@ -57,7 +60,11 @@ static class Known
             if (type is "Damagable" or "HealthHandler" or "DamageOverTime" && DamageMethods.Contains(name))
                 return new(Fix.Auto, "method", what, "gained a trailing HealthHandler.DamageSource parameter; fix passes DamageSource.Player");
             if (type == "ObjectsToSpawn" && name == "SpawnObject")
-                return new(Fix.Manual, "method", what, "now returns FriendlyFoe.PoolableWrapper[] (pooled; entries can be null, use .Instance). Don't Destroy() pooled objects");
+                return resultDropped
+                    ? new(Fix.Auto, "method", what, "now returns FriendlyFoe.PoolableWrapper[] (pooled objects). The mod drops the result, so fix calls the new one")
+                    : new(Fix.Manual, "method", what, "now returns FriendlyFoe.PoolableWrapper[] (pooled; entries can be null, use .Instance). Don't Destroy() pooled objects");
+            if (type == "TMPro.TMP_FontAsset" && name == "HasCharacter")
+                return new(Fix.Auto, "method", what, "gained a tryAddCharacter parameter; fix passes false, so it only looks, as before");
             if (type == "CardBar" && name == "OnHover")
                 return new(Fix.Manual, "method", what, "OnHover(CardInfo, Vector3) is gone; hover now takes a CardBarButton. See docs/MAPPING.md section 4");
             if (type == "PlayerManager" && name == "AddPlayerDiedAction")
@@ -105,6 +112,7 @@ static class Known
             case ("CardChoice", "GetRanomCard"): return new(Fix.Auto, "harmony", what, "the typo was fixed: GetRandomCard");
             case ("TrickShot", "Awake"): return new(Fix.Manual, "harmony", what, "TrickShot has no Awake now; its setup moved to Start, and trail is an IScaleTrailFromDamage");
             case ("ChangeColor", "Start"): return new(Fix.Manual, "harmony", what, "ChangeColor is now an empty marker component; drop this patch");
+            case ("CardBar", "Update"): return new(Fix.Manual, "harmony", what, "CardBar has no Update now: nothing on it runs every frame (CardBarHandler.Update only handles d-pad input). Move this code to an Update of your own. HarmonyX throws on this patch and PatchAll stops there, so patches after it in the mod don't apply either");
         }
         return new(Fix.Manual, "harmony", what, problem);
     }

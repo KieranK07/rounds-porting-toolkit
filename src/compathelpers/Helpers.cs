@@ -50,6 +50,28 @@ public static class __RoundsCompat
         return 1f;
     }
 
+    // ldsfld Optionshandler::lockMouse / lockStick -> the aim-in-8-directions toggle ("OPTION_MOUSE_AIM8DIR" /
+    // "OPTION_CONTROLLER_AIM8DIR"), which PlayerInput reads where it used to read those statics. Fallback false.
+    public static bool GetToggle(string key)
+    {
+        try
+        {
+            Optionshandler oh = Optionshandler.instance;
+            if (oh == null) return false;
+            OptionsData od = oh.OptionsData;
+            if (od == null) return false;
+            var list = od.SettingsList;
+            if (list == null) return false;
+            for (int i = 0; i < list.Count; i++)
+            {
+                OptionsData.SettingsData s = list[i];
+                if (s != null && s.m_key == key) return s.CurrentValueToggle;
+            }
+        }
+        catch (Exception) { }
+        return false;
+    }
+
     // ldfld CardInfo::cardName (now private; UnboundLib 4 never fills it for mod cards). Same order as ModdingUtils'
     // CompatShims.GetCardName so cross-mod name comparisons agree: legacy field if non-empty -> for UnboundLib
     // CustomCard cards the m_localizedCardName entry key (= GetTitle()) -> CardName property -> GameObject name.

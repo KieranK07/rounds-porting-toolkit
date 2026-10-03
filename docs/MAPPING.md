@@ -115,6 +115,18 @@ behaviour.
 The scanner now also follows HarmonyX: several complete `[HarmonyPatch]` attributes on one method are separate
 targets (`AttributePatch.Create`), not one merged target.
 
+## 7b2. Found by the in-game bench (handled since rounds-port 1.3.0)
+
+| Old | New | `fix` |
+|---|---|---|
+| `Optionshandler::lockMouse`, `lockStick` (static bools) | `OptionsData` toggles `OPTION_MOUSE_AIM8DIR`, `OPTION_CONTROLLER_AIM8DIR` (what `PlayerInput` reads) | helper reads the toggle (fallback `false`) |
+| `DamageOverTime::DoDamageOverTime(..., bool lethal)` | + trailing `DamageSource` (and private now, as `HealthHandler.dot` already was) | passes `DamageSource.Player` |
+| `ObjectsToSpawn::SpawnObject(...)` returning `GameObject[]`, result dropped (`pop`) | returns `FriendlyFoe.PoolableWrapper[]` | calls the new method. When the result is used: MANUAL |
+| `TMPro.TMP_FontAsset::HasCharacter(char, bool searchFallbacks)` | `HasCharacter(char, bool, bool tryAddCharacter)` | passes `false` |
+| `UnityEngine.TextCoreModule` types | `UnityEngine.TextCoreFontEngineModule` / `TextCoreTextEngineModule` | type reference retargeted to the module that has it |
+| Harmony patch on `CardBar::OnHover` with `CardInfo card` | `OnHover(CardBarButton cardButton)` | parameter becomes `CardBarButton cardButton`, each read becomes `cardButton.m_cardInfo` (REVIEW: the game's `OnHover` also sets `DoesHover` and moves the selection marker, which a prefix returning false skips) |
+| Harmony patch on `CardBar::Update` | `CardBar` has no `Update` | MANUAL. HarmonyX throws on it and `PatchAll` stops there |
+
 ## 7c. UnboundLib 3 → 4 and RoundsWithFriends 2 → 3 (Bknibb's ports)
 
 Public API of willis81808 UnboundLib 3.2.14 against Bknibb's 4.2.5: 7 of 517 types and members gone, none changed. Olavim

@@ -152,6 +152,12 @@ sealed class Fixer
                         ReplaceWith(il, ins, Instruction.Create(OpCodes.Ldstr, k), Instruction.Create(OpCodes.Call, Helper("GetVolume")));
                         Count($"read Optionshandler.{f.Name} -> options slider \"{k}\"");
                     }
+                    else if (ins.OpCode == OpCodes.Ldsfld && f.DeclaringType.FullName == "Optionshandler" && (f.Name == "lockMouse" || f.Name == "lockStick") && f.Resolve() == null)
+                    {
+                        var k = f.Name == "lockMouse" ? "OPTION_MOUSE_AIM8DIR" : "OPTION_CONTROLLER_AIM8DIR";
+                        ReplaceWith(il, ins, Instruction.Create(OpCodes.Ldstr, k), Instruction.Create(OpCodes.Call, Helper("GetToggle")));
+                        Count($"read Optionshandler.{f.Name} -> options toggle \"{k}\"");
+                    }
                     else if (IsGameField(f, "CardBarButton", "card") && f.Resolve() == null)
                     {
                         ins.Operand = M.ImportReference(GT("CardBarButton").Fields.Single(x => x.Name == "m_cardInfo"));
@@ -220,7 +226,14 @@ sealed class Fixer
                         Count("PlayerManager.AddPlayerDiedAction(...) -> PlayerDiedAction += ...");
                         continue;
                     }
-                    if ((dt is "Damagable" or "HealthHandler" or "DamageOverTime") && mr.Name is "CallTakeDamage" or "TakeDamage" or "DoDamage" or "TakeDamageOverTime" or "RPCA_SendTakeDamage"
+                    if (dt == "ObjectsToSpawn" && mr.Name == "SpawnObject" && mr.Resolve() == null && ins.Next?.OpCode == OpCodes.Pop
+                        && GT(dt).Methods.SingleOrDefault(x => x.Name == mr.Name && x.Parameters.Select(p => p.ParameterType.FullName).SequenceEqual(mr.Parameters.Select(p => p.ParameterType.FullName))) is MethodDefinition spawn)
+                    {
+                        ins.Operand = M.ImportReference(spawn);
+                        Count("ObjectsToSpawn.SpawnObject(...) with its result dropped -> the pooled one (returns PoolableWrapper[])");
+                        continue;
+                    }
+                    if ((dt is "Damagable" or "HealthHandler" or "DamageOverTime") && mr.Name is "CallTakeDamage" or "TakeDamage" or "DoDamage" or "TakeDamageOverTime" or "DoDamageOverTime" or "RPCA_SendTakeDamage"
                         && mr.Resolve() == null)
                     {
                         var target = GT(dt).Methods.SingleOrDefault(x => x.Name == mr.Name && x.Parameters.Count == mr.Parameters.Count + 1
@@ -242,7 +255,7 @@ sealed class Fixer
     bool OtherCall(ILProcessor il, Instruction ins, MethodReference mr)
     {
         var dt = mr.DeclaringType.FullName;
-        if (dt is not ("Photon.Realtime.Room" or "TMPro.TMP_Text" or "TMPro.TextMeshProUGUI" or "TMPro.TextMeshPro")) return false;
+        if (dt is not ("Photon.Realtime.Room" or "TMPro.TMP_Text" or "TMPro.TextMeshProUGUI" or "TMPro.TextMeshPro" or "TMPro.TMP_FontAsset")) return false;
         MethodDefinition? Find(string name, string sig)
         {
             for (var t = mr.DeclaringType.Resolve(); t != null; t = t.BaseType?.Resolve())
@@ -259,6 +272,10 @@ sealed class Fixer
             case ("get_PlayerCount", "") when mr.ReturnType.FullName == "System.Byte" && Find("get_PlayerCount", "") is MethodDefinition pc:
                 ReplaceWith(il, ins, Instruction.Create(ins.OpCode, M.ImportReference(pc)), Instruction.Create(OpCodes.Conv_U1));
                 Count("Room.PlayerCount: int, converted to the old byte");
+                return true;
+            case ("HasCharacter", "Char,Boolean") when Find("HasCharacter", "Char,Boolean,Boolean") is MethodDefinition hc:
+                ReplaceWith(il, ins, Instruction.Create(OpCodes.Ldc_I4_0), Instruction.Create(ins.OpCode, M.ImportReference(hc)));
+                Count("TMP_FontAsset.HasCharacter(c, searchFallbacks) -> + tryAddCharacter: false");
                 return true;
             case ("ForceMeshUpdate", "") when Find("ForceMeshUpdate", "Boolean,Boolean") is MethodDefinition fm:
                 ReplaceWith(il, ins, Instruction.Create(OpCodes.Ldc_I4_0), Instruction.Create(OpCodes.Ldc_I4_0), Instruction.Create(ins.OpCode, M.ImportReference(fm)));
@@ -333,6 +350,8 @@ sealed class Fixer
             { tr.Scope = Ref("com.rlabrecque.steamworks.net"); Count($"{where}{tr.FullName}: Assembly-CSharp-firstpass -> com.rlabrecque.steamworks.net"); }
             else if (an.Name == "UnityEngine.CoreModule" && tr.FullName == "UnityEngine.Input")
             { tr.Scope = Ref("UnityEngine.InputLegacyModule"); Count($"{where}UnityEngine.Input: UnityEngine.CoreModule -> UnityEngine.InputLegacyModule"); }
+            else if (an.Name == "UnityEngine.TextCoreModule" && scanner.MovedTextCore(tr) is string to)
+            { tr.Scope = Ref(to); Count($"{where}{tr.FullName}: UnityEngine.TextCoreModule -> {to}"); }
         }
         foreach (var tr in M.GetTypeReferences().ToList()) Retarget(tr, "type ");
         // typeof(...) in Harmony attributes is stored as an assembly-qualified name, so it needs the same change.
@@ -413,6 +432,25 @@ sealed class Fixer
         }
     }
 
+    // A Harmony patch on CardBar.OnHover with the old `CardInfo card` parameter: it takes the hovered CardBarButton now.
+    // The parameter becomes `CardBarButton cardButton`, and each read of it reads cardButton.m_cardInfo.
+    void HoverCardParam(TypeDefinition t, MethodDefinition pm, ParameterDefinition p)
+    {
+        if (!pm.HasBody || pm.Body.Instructions.Any(i => i.Operand == p && i.OpCode.Code is not (Code.Ldarg or Code.Ldarg_S)
+            && i.OpCode.Code is Code.Starg or Code.Starg_S or Code.Ldarga or Code.Ldarga_S))
+        { Notes.Add($"MANUAL {pm.FullName}: writes or takes the address of `card`; left as is"); return; }
+        var button = GT("CardBarButton");
+        var cardInfo = M.ImportReference(button.Fields.Single(f => f.Name == "m_cardInfo"));
+        var body = pm.Body; var il = body.GetILProcessor();
+        body.SimplifyMacros();
+        foreach (var ins in body.Instructions.Where(i => i.OpCode == OpCodes.Ldarg && i.Operand == p).ToList())
+            il.InsertAfter(ins, Instruction.Create(OpCodes.Ldfld, cardInfo));
+        body.OptimizeMacros();
+        p.ParameterType = M.ImportReference(button);
+        p.Name = "cardButton";
+        Count($"Harmony {t.Name}.{pm.Name}: CardBar.OnHover's CardInfo card -> CardBarButton cardButton (.m_cardInfo)");
+    }
+
     void Renames()
     {
         foreach (var t in Scanner.AllTypes(M).ToList())
@@ -431,7 +469,9 @@ sealed class Fixer
             foreach (var (info, methods) in scanner.HarmonyPatches(t))
                 foreach (var pm in methods)
                     foreach (var (param, _, fixTo) in scanner.PatchParamProblems(info, pm).ToList())
-                        if (fixTo != null && pm.Parameters.FirstOrDefault(p => p.Name == param) is ParameterDefinition pd)
+                        if (fixTo == "cardButton" && pm.Parameters.FirstOrDefault(p => p.Name == param) is ParameterDefinition cp)
+                            HoverCardParam(t, pm, cp);
+                        else if (fixTo != null && pm.Parameters.FirstOrDefault(p => p.Name == param) is ParameterDefinition pd)
                         {
                             pd.Name = fixTo;
                             Count($"Harmony {t.Name}.{pm.Name}: injected field {param} -> {fixTo}");

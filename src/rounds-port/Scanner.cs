@@ -21,7 +21,7 @@ sealed partial class Scanner(Game game)
     {
         if (TypeProblem(t) is not string why || !why.StartsWith("assembly ")) return false;
         var name = Scope(t);
-        if (name.StartsWith("Sirenix.") || name is "UnboundLib" or "MMHOOK_Assembly-CSharp" or "Assembly-CSharp-firstpass"
+        if (name.StartsWith("Sirenix.") || name is "UnboundLib" or "MMHOOK_Assembly-CSharp" or "Assembly-CSharp-firstpass" or "UnityEngine.TextCoreModule"
             || File.Exists(Path.Combine(game.Managed, name + ".dll"))) return false;   // the game's or a known change
         Unchecked.Add(name);
         return true;
@@ -34,7 +34,7 @@ sealed partial class Scanner(Game game)
         Unchecked.Clear();
 
         foreach (var tr in module.GetTypeReferences())
-            if (!MissingModDependency(tr) && TypeProblem(tr) is string why) Add(Known.Type(tr, Scope(tr), why));
+            if (!MissingModDependency(tr) && TypeProblem(tr) is string why) Add(Known.Type(tr, Scope(tr), why, MovedTextCore(tr)));
 
         foreach (var mr in module.GetMemberReferences())
         {
@@ -49,7 +49,7 @@ sealed partial class Scanner(Game game)
                 if (res == null) why = "not found" + Hints(dt, mr.Name);
             }
             catch (Exception e) { why = e.GetType().Name + ": " + e.Message; }
-            if (why != null) Add(Known.Member(mr, dt!, why));
+            if (why != null) Add(Known.Member(mr, dt!, why, mr is MethodReference rm && ResultDropped(module, rm)));
         }
 
         foreach (var t in AllTypes(module))
@@ -218,11 +218,46 @@ sealed partial class Scanner(Game game)
             if (n is "__instance" or "__result" or "__state" or "__originalMethod" or "__args" or "__runOriginal" or "__exception") continue;
             if (n.StartsWith("__") && int.TryParse(n[2..], out _)) continue;
             var tp = target.Parameters.FirstOrDefault(x => x.Name == n);
+            if (tp == null && n == "card" && p.ParameterType.FullName == "CardInfo" && IsHoverByButton(target))
+            {
+                yield return (n, "OnHover takes the hovered CardBarButton (cardButton) now, and its m_cardInfo is the card; fix reads that wherever the patch used card. "
+                    + "The game's OnHover now also sets DoesHover and moves the selection marker, which a prefix returning false skips", "cardButton");
+                continue;
+            }
             if (tp == null) { yield return (n, "the target has no parameter with that name; it has (" + string.Join(", ", target.Parameters.Select(x => x.ParameterType.Name + " " + x.Name)) + ")", null); continue; }
             var a = p.ParameterType is ByReferenceType br ? br.ElementType : p.ParameterType;
             var b = tp.ParameterType is ByReferenceType br2 ? br2.ElementType : tp.ParameterType;
             if (a.FullName != b.FullName && a.FullName != "System.Object") yield return (n, $"type {a.Name} doesn't match the target's {b.Name}", null);
         }
+    }
+
+    public static bool IsHoverByButton(MethodDefinition m) => m.Name == "OnHover" && m.DeclaringType.FullName == "CardBar"
+        && m.Parameters.Count == 1 && m.Parameters[0].ParameterType.FullName == "CardBarButton";
+
+    // Every call to `m` in the module is followed by pop: the mod never uses what it returns.
+    static bool ResultDropped(ModuleDefinition module, MethodReference m)
+    {
+        if (m.ReturnType.FullName == "System.Void") return false;
+        int calls = 0;
+        foreach (var t in AllTypes(module))
+            foreach (var md in t.Methods.Where(x => x.HasBody))
+                foreach (var ins in md.Body.Instructions)
+                    if (ins.OpCode.Code is Code.Call or Code.Callvirt && ins.Operand is MethodReference r && r.FullName == m.FullName)
+                    {
+                        if (ins.Next?.OpCode.Code != Code.Pop) return false;
+                        calls++;
+                    }
+        return calls > 0;
+    }
+
+    // UnityEngine.TextCoreModule (Unity 2018) became TextCoreFontEngineModule and TextCoreTextEngineModule: the one that
+    // has the type, or null.
+    public string? MovedTextCore(TypeReference t)
+    {
+        if (t.DeclaringType != null || t.Scope?.Name != "UnityEngine.TextCoreModule") return null;
+        foreach (var an in new[] { "UnityEngine.TextCoreFontEngineModule", "UnityEngine.TextCoreTextEngineModule" })
+            if (resolver.Get(an) is AssemblyDefinition a && a.MainModule.GetType(t.FullName) != null) return an;
+        return null;
     }
 
     // ---------------------------------------------------------------- Photon RPCs to game methods

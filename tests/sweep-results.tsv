@@ -1,6 +1,6 @@
 # package	version	before auto/review/manual	left auto/review/manual	grade	fixed DLLs (sha256, 16 chars)
 Root-RarityLib	1.3.0	2/0/0	0/0/0	0	RarityLib.dll=ecff0be8c7945a4f
-Pykess-ModdingUtils	0.4.8	6/4/3	0/3/3	2	ModdingUtils.dll=8335502497454d06
+Pykess-ModdingUtils	0.4.8	7/4/2	0/3/2	2	ModdingUtils.dll=12d1a3c46b99e8f6
 XAngelMoonX-CR	2.7.0	9/2/0	0/0/0	0	CosmicRounds.dll=f3264690f4035ce6
 Pykess-CardChoiceSpawnUniqueCardPatch	0.1.10	0/0/0	0/0/0	0	-
 Root-Classes_Manager_Reborn	1.5.5	2/1/0	0/1/0	1	ClassesManagerReborn.dll=d13f4efa72f88fdd
@@ -70,7 +70,7 @@ willis81808-CursorLock	1.0.1	0/0/0	0/0/0	0	-
 CrazyMan-ToggleEffectsMod	1.1.3	0/0/0	0/0/0	0	-
 woukie-MapImageObjects	1.2.3	0/0/0	0/0/0	0	-
 Alphahex-Supcom2Cards	2.0.3	5/0/0	0/0/0	0	Supcom2Cards.dll=0ecfe8d9fd12e673
-Sfinford-ProjectileChargePatch	0.0.1	2/1/2	0/0/2	2	ProjectileChargePatch.dll=d32f470a5f5092c4
+Sfinford-ProjectileChargePatch	0.0.1	4/1/0	0/0/0	0	ProjectileChargePatch.dll=b601646bde45ce23
 BossSloth-StickFightMaps	0.3.3	0/0/1	0/0/1	2	-
 Astr0ni-UnstableCards	2.9.0	3/0/0	0/0/0	0	UnstableCards.dll=2690a84df9a4ecab
 Root-Root_Core	1.4.10	8/3/2	0/3/2	2	Root Core Modual.dll=2389d11640c953d5;RootCoreRoundsTrackerPatch.dll=6941b577f61a1d93
@@ -82,14 +82,14 @@ otDan-GameSaver	1.0.7	6/0/0	0/0/0	0	GameSaver.dll=a6da20174fa372d0
 Zom_23-ZOMC	2.4.3	6/0/0	0/0/0	0	ZomC-Cards.dll=5a0396ee7c7242ad
 Root-Port_of_FFC	1.3.11	4/2/0	0/2/0	1	PFFC.dll=1022f3e96f0fe9f2
 Pykess-Faces_Plus	1.0.0	0/0/0	0/0/0	0	-
-BossSloth-LocalZoom	1.1.1	2/1/1	0/0/2	2	LocalZoom.dll=9cf5d275b71d30b7
+BossSloth-LocalZoom	1.1.1	2/1/1	0/0/1	2	LocalZoom.dll=4cf29288f0c09d96
 willis81808-MapsPlus	0.0.3	1/0/0	0/0/0	0	MapsPlus.dll=d95c41c4aa91aad7
 willis81808-DeckSmithUtil	1.0.0	1/0/0	0/0/0	0	DeckSmithUtil.dll=2a8ae4f399a29fde
 Root-MorePicksPatch	1.0.2	0/0/0	0/0/0	0	-
 Root-Simple_Gamemodes	1.3.7	3/1/1	0/0/1	2	Simple_Gamemodes.dll=7f8fdc6b3eaac5d8
 poppycars-ChaosPoppycarsCardsCore	1.0.9	5/1/0	0/1/0	1	ChaosPoppycarsCardsCore.dll=1a1b9608aeab60dd
 Root-UtilityCategories	0.1.0	0/0/0	0/0/0	0	-
-MrFuntik-MFM	3.8.1	9/21/1	0/19/1	2	MFM.dll=ee2ebee4cbd5e63a
+MrFuntik-MFM	3.8.1	10/21/0	0/19/0	1	MFM.dll=922544dd989a06c9
 Pykess-CrosshairForAll	1.0.1	0/0/0	0/0/0	0	-
 Pykess-Toggle_Friendly_Fire	0.0.0	2/0/0	0/0/0	0	ZenithsCommission.dll=09484d3d2a59b68a
 poppycars-ChaosPoppycarsCardsComplex	1.0.6	6/3/0	0/1/0	1	ChaosPoppycarsCardsComplex.dll=7ea7b6c5b3b91c20
