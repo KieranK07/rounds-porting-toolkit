@@ -8,7 +8,7 @@ sealed record Issue(Fix Fix, string Kind, string What, string Detail);
 
 // Finds everything in a mod that no longer lines up with the current game: missing types and members, Harmony
 // targets and injected parameters, reflection by name, broken overrides, and known behaviour changes.
-sealed class Scanner(Game game)
+sealed partial class Scanner(Game game)
 {
     readonly MapResolver resolver = game.Resolver;
     readonly MetadataResolver md = new(game.Resolver);
@@ -89,9 +89,12 @@ sealed class Scanner(Game game)
                 }
             }
         }
-        foreach (var i in Bundles.Check(module, game, Unchecked)) Add(i);
+        MoreChecks(module, game, Add);
         return issues;
     }
+
+    // The CLI also checks the asset bundles a mod ships (Bundles.cs); the load-time patcher doesn't.
+    partial void MoreChecks(ModuleDefinition module, Game game, Action<Issue> add);
 
     // ---------------------------------------------------------------- inheritance
     void Inheritance(ModuleDefinition module, TypeDefinition t, Action<Issue> add)

@@ -346,3 +346,11 @@ static class Bundles
         }
     }
 }
+
+sealed partial class Scanner
+{
+    partial void MoreChecks(ModuleDefinition module, Game game, Action<Issue> add)
+    {
+        foreach (var i in Bundles.Check(module, game, Unchecked)) add(i);
+    }
+}
