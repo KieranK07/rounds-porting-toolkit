@@ -154,6 +154,7 @@ dotnet run --project src/rounds-port -c Release -- scan "C:\path\to\MyMod.dll"
 | `src/rounds-port` | the CLI (Mono.Cecil) | no: the two DLLs below are checked in, prebuilt |
 | `src/compathelpers` | helpers `fix` copies into mods | yes |
 | `src/HotReload` | the Hot Reload BepInEx plugin | yes, with BepInEx installed |
+| `src/Runtime` | in-game fixes for old mods running together ([docs/RUNTIME.md](docs/RUNTIME.md)), in testing | yes, with BepInEx installed |
 
 Game path: `C:\Program Files (x86)\Steam\steamapps\common\ROUNDS` or the macOS Steam folder by default; elsewhere,
 add `-p:GameDir="<folder>"`. After changing `src/compathelpers` or `src/HotReload`, build it with
