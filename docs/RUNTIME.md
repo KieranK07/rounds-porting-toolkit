@@ -18,6 +18,8 @@ rounds-mac-modpack's Mac Compat Fixes is installed, BepInEx skips this plugin: t
 | Card visuals | RarityLib throws on destroyed rarity markers; the new card prefab's particles cover cards in the toggle-cards menu; menu card art doesn't animate on hover; selected menu buttons turn white |
 | MapsExtended | Its object manager is destroyed at startup, so clients load custom maps without their physics objects |
 | Cosmic Rounds 2.7.0 | Bullet effects look for the owner on the bullet, card templates run `Start` with no bullet, ice trails outlive their object, hit effects explode with no owner: thousands of errors a round |
+| `CardBar.Update` patches | The game's `CardBar` has no `Update` now. AutoFix disables patches on it (they'd stop the mod's `PatchAll`); these call them every frame for each active card bar, as `Update` did (LocalZoom keeps the hovered card's zoom in step with the camera) |
+| Cards Plus | Its Cyberpunk cards' effect also lands on the card prefab UnboundLib builds, which has no visual, and throws there at startup; skipped on the prefab only |
 
 Source: `src/Runtime`. Patches whose target mod isn't installed are skipped. Safe to swap with Hot Reload: every load
 patches under its own Harmony id and undoes everything when it unloads.

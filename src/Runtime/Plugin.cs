@@ -19,6 +19,7 @@ namespace RoundsPort.Runtime
     [BepInDependency("pykess.rounds.plugins.moddingutils", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.XAngelMoonX.rounds.CosmicRounds", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("io.olavim.rounds.mapsextended", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("com.willis.rounds.cardsplus", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         Harmony harmony;
@@ -54,6 +55,8 @@ namespace RoundsPort.Runtime
             MissingText.Apply(log);
             CardVisualFixesRunner.Log = log;
             helper.AddComponent<CardVisualFixesRunner>();
+            CardBarUpdateRunner.Log = log;
+            helper.AddComponent<CardBarUpdateRunner>();
             if (IsMetal)
             {
                 ShaderFix.Sweep();
