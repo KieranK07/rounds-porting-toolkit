@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- rounds-port AutoFix: a BepInEx preloader patcher that runs rounds-port's fix on old mods while the game starts.
+       Same scan/fix source as the CLI (linked, not copied), built for the game's Mono against the Mono.Cecil 0.10.4
+       that BepInEx ships, so it's one DLL with nothing else to install. Needs the game to build (BepInEx/core). -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>rounds-port.AutoFix</AssemblyName>
+    <Version>1.2.0</Version>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <Optimize>true</Optimize>
+    <!-- .NET Framework's BCL has no nullable annotations -->
+    <NoWarn>$(NoWarn);CS8600;CS8601;CS8602;CS8603;CS8604;CS8618;CS8619;CS8620;CS8625;CS8629;CS8631;CS8634;CS8714</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="$(GameDir)/BepInEx/core/BepInEx.dll" Private="false" />
+    <Reference Include="$(GameDir)/BepInEx/core/Mono.Cecil.dll" Private="false" />
+    <Reference Include="$(GameDir)/BepInEx/core/Mono.Cecil.Rocks.dll" Private="false" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="../rounds-port/Scanner.cs;../rounds-port/Fixer.cs;../rounds-port/Known.cs;../rounds-port/Game.cs" LinkBase="core" />
+    <EmbeddedResource Include="../rounds-port/helpers/compathelpers.dll" LogicalName="compathelpers.dll" />
+  </ItemGroup>
+</Project>

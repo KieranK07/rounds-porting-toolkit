@@ -1,5 +1,5 @@
 <Project>
-  <!-- Where ROUNDS is installed. Only HotReload and compathelpers need it (they compile against the game's DLLs);
+  <!-- Where ROUNDS is installed. Only HotReload, AutoFix and compathelpers need it (they compile against the game's DLLs);
        rounds-port itself builds without the game. Steam somewhere else: dotnet build -p:GameDir="D:\SteamLibrary\steamapps\common\ROUNDS" -->
   <PropertyGroup>
     <GameDir Condition="'$(GameDir)' == '' And '$(OS)' == 'Windows_NT'">C:\Program Files (x86)\Steam\steamapps\common\ROUNDS</GameDir>
