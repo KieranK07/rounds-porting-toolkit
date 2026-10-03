@@ -30,6 +30,7 @@ sealed class Fixer
         Generic();
         RpcArgs();
         Renames();
+        PluginLoad();
     }
 
     void Count(string what) { counts.TryGetValue(what, out var c); counts[what] = c + 1; }
@@ -429,6 +430,62 @@ sealed class Fixer
                 holder.CustomAttributes.Add(ca);
                 Count($"[HarmonyPatch] {t.Name}: CardBar.OnHover -> argumentTypes {{ typeof(CardBarButton) }}");
             }
+            else if (scanner.TargetProblem(info) is string problem
+                     && Known.HarmonyTarget(info, problem, false, scanner.TargetInPortedCode(info)).Detail.Contains(Known.DisablesPatch))
+                DisablePatch(t, info, methods);
+        }
+    }
+
+    // A [HarmonyPatch] whose target the game no longer has: HarmonyX throws on it and PatchAll stops, so the mod's later
+    // patches don't apply either. Drop the attribute naming the target and rename the patch methods it applied to
+    // (HarmonyX also treats methods named Prefix, Postfix... as patches), so PatchAll skips them. The new name keeps the
+    // target: __RoundsCompat_Disabled_<type>_<method>_<old name> (rounds-port Runtime runs CardBar.Update ones itself).
+    void DisablePatch(TypeDefinition t, HarmonyInfo info, List<MethodDefinition> methods)
+    {
+        static bool IsPatchAttr(CustomAttribute a) => a.AttributeType.Name is "HarmonyPatch" or "HarmonyPrefix" or "HarmonyPostfix"
+            or "HarmonyFinalizer" or "HarmonyTranspiler" or "HarmonyILManipulator";
+        static string? MethodArg(CustomAttribute a) => a.ConstructorArguments.Select(x => x.Value).OfType<string>().FirstOrDefault();
+        var target = $"{info.Type?.Name ?? info.TypeName?.Split('.', '+').Last()}_{info.Method}";
+        if (!methods.Any(m => m.CustomAttributes.Any(a => a.AttributeType.Name == "HarmonyPatch")))
+            foreach (var a in t.CustomAttributes.Where(a => a.AttributeType.Name == "HarmonyPatch").ToList()) t.CustomAttributes.Remove(a);
+        foreach (var m in methods)
+        {
+            var own = m.CustomAttributes.Where(a => a.AttributeType.Name == "HarmonyPatch").ToList();
+            if (own.Count(a => MethodArg(a) != null) > 1)
+            {
+                // one of several targets: drop only the attribute naming this one
+                foreach (var a in own.Where(a => MethodArg(a) == info.Method)) m.CustomAttributes.Remove(a);
+                continue;
+            }
+            foreach (var a in m.CustomAttributes.Where(IsPatchAttr).ToList()) m.CustomAttributes.Remove(a);
+            m.Name = Scanner.DisabledPatch + target + "_" + m.Name;
+        }
+        Count($"[HarmonyPatch] {t.Name}: {info} disabled, its target is gone");
+    }
+
+    // ---------------------------------------------------------------- plugin load
+    // A plugin Awake that looks up scene objects: BepInEx now starts plugins before the game has loaded any scene. The
+    // body moves to <Awake>__RoundsCompat, and Awake hands it to __RoundsCompat.AfterFirstScene.
+    void PluginLoad()
+    {
+        foreach (var t in Scanner.AllTypes(M).ToList())
+        {
+            if (scanner.PluginAwake(t) is not MethodDefinition awake || scanner.SceneLookupAtLoad(awake) == null) continue;
+            var later = Helper("AfterFirstScene");
+            var action = later.Parameters[0].ParameterType;
+            awake.Name = "Awake__RoundsCompat";
+            var ctor = new MethodReference(".ctor", M.TypeSystem.Void, action) { HasThis = true };
+            ctor.Parameters.Add(new ParameterDefinition(M.TypeSystem.Object));
+            ctor.Parameters.Add(new ParameterDefinition(M.TypeSystem.IntPtr));
+            var nw = new MethodDefinition("Awake", MethodAttributes.Private | MethodAttributes.HideBySig, M.TypeSystem.Void);
+            var il = nw.Body.GetILProcessor();
+            il.Emit(OpCodes.Ldarg_0);
+            il.Emit(OpCodes.Ldftn, awake);
+            il.Emit(OpCodes.Newobj, ctor);
+            il.Emit(OpCodes.Call, later);
+            il.Emit(OpCodes.Ret);
+            t.Methods.Add(nw);
+            Count($"{t.Name}.Awake: looks up scene objects -> runs once the first scene has loaded (__RoundsCompat.AfterFirstScene)");
         }
     }
 

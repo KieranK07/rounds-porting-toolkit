@@ -55,10 +55,13 @@ sealed partial class Scanner(Game game)
         foreach (var t in AllTypes(module))
         {
             Inheritance(module, t, Add);
+            if (PluginAwake(t) is MethodDefinition awake && SceneLookupAtLoad(awake) is string lookup)
+                Add(new Issue(Fix.Auto, "behaviour", $"{t.FullName}::Awake finds scene objects at plugin load",
+                    $"{lookup}: BepInEx now starts plugins before the game has loaded any scene (on the old game the first scene was there), so this finds nothing. fix runs this Awake once the first scene has loaded"));
             foreach (var (info, patch) in HarmonyPatches(t))
             {
                 if (info.Type != null && MissingModDependency(info.Type)) continue;
-                if (TargetProblem(info) is string p) { Add(Known.HarmonyTarget(info, p, DamageSourceOverload(info) != null)); continue; }
+                if (TargetProblem(info) is string p) { Add(Known.HarmonyTarget(info, p, DamageSourceOverload(info) != null, TargetInPortedCode(info))); continue; }
                 foreach (var pm in patch)
                     foreach (var (param, problem, fixTo) in PatchParamProblems(info, pm))
                         Add(new Issue(fixTo != null ? Fix.Review : Fix.Manual, "harmony param", $"{t.FullName}::{pm.Name} ({param}) -> {info}",
@@ -75,6 +78,10 @@ sealed partial class Scanner(Game game)
                         Add(new Issue(OnlyMissingDamageSource(r) ? Fix.Auto : Fix.Manual, "rpc", $"{t.FullName}::{m.Name} RPC(\"{r.Name}\") with {r.Args} argument{(r.Args == 1 ? "" : "s")}",
                             "the game's version takes " + string.Join(" | ", r.Targets.Select(x => "(" + string.Join(", ", x.Parameters.Select(p => p.ParameterType.Name)) + ")"))
                             + ", and PUN drops RPCs with the wrong argument count" + (OnlyMissingDamageSource(r) ? "; fix appends DamageSource.Player" : Known.RpcNote(r))));
+                if (m.Name.StartsWith(DisabledPatch))
+                    Add(new Issue(Fix.Review, "harmony", $"{t.FullName}::{m.Name}",
+                        "rounds-port disabled this Harmony patch: its target is gone in the current game, and HarmonyX would have thrown on it and stopped PatchAll. "
+                        + (m.Name.StartsWith(DisabledPatch + "CardBar_Update_") ? "rounds-port Runtime calls it every frame for each active CardBar, as CardBar.Update did" : "What it did is lost")));
                 foreach (var ins in m.Body.Instructions)
                 {
                     if (ins.Operand is FieldReference f && f.Name == "cardName" && f.DeclaringType.FullName == "CardInfo" && IsGame(f.DeclaringType))
@@ -146,7 +153,7 @@ sealed partial class Scanner(Game game)
 
     public TypeDefinition? TargetType(HarmonyInfo h) => h.Type != null ? Resolve(h.Type) : h.TypeName != null ? FindType(h.TypeName) : null;
 
-    string? TargetProblem(HarmonyInfo h)
+    public string? TargetProblem(HarmonyInfo h)
     {
         if (h.Type == null && h.TypeName == null) return null;
         var td = TargetType(h);
@@ -169,6 +176,16 @@ sealed partial class Scanner(Game game)
             return "no overload with those argumentTypes; the game has: " + string.Join(" | ", cands.Select(c => c.FullName));
         }
         return "method not found" + Hints(td, h.Method);
+    }
+
+    // Whether a [HarmonyPatch] target is in the game, Unity, Photon or a library Bknibb ported (UnboundLib, RWF, MMHOOK):
+    // code whose changes fix answers for. A patch on another mod that lacks its target misses on the old game too.
+    public bool TargetInPortedCode(HarmonyInfo h)
+    {
+        var name = TargetType(h)?.Module.Assembly.Name.Name ?? h.Type?.Scope?.Name;
+        if (name == null || h.Type?.Scope is ModuleDefinition) return false;
+        return name.StartsWith("Assembly-CSharp") || name.StartsWith("UnityEngine") || name.StartsWith("Unity.") || name.StartsWith("Photon")
+            || name is "UnboundLib" or "RoundsWithFriends" or "MMHOOK_Assembly-CSharp";
     }
 
     // A damage-method target whose argumentTypes lack the trailing HealthHandler.DamageSource the game added.
@@ -336,6 +353,41 @@ sealed partial class Scanner(Game game)
             yield return new ReflectSite(ld, where, name, $"{kind.ToLower()} {td.Name}.{name} not found" + Hints(td, name), fixTo);
         }
     }
+
+    // ---------------------------------------------------------------- plugin load
+    // A plugin's Awake that fix can replace (not virtual), or null.
+    public MethodDefinition? PluginAwake(TypeDefinition t) =>
+        t.Methods.FirstOrDefault(m => m.Name == "Awake" && !m.IsStatic && !m.IsVirtual && m.Parameters.Count == 0 && m.HasBody && RunsAtPluginLoad(m));
+
+    static readonly HashSet<string> ObjectLookups = new() { "FindObjectOfType", "FindObjectsOfType", "FindFirstObjectByType", "FindAnyObjectByType", "FindObjectsByType" };
+    static readonly HashSet<string> GameObjectLookups = new() { "Find", "FindWithTag", "FindGameObjectWithTag", "FindGameObjectsWithTag" };
+
+    // What a plugin's Awake reaches (methods of its own module, a few calls deep) that needs a loaded scene, as a call
+    // path, or null. Delegates it only creates aren't followed: they run later.
+    public string? SceneLookupAtLoad(MethodDefinition awake)
+    {
+        var seen = new HashSet<MethodDefinition>();
+        string? Walk(MethodDefinition m, string path, int depth)
+        {
+            if (!seen.Add(m) || !m.HasBody) return null;
+            foreach (var ins in m.Body.Instructions)
+            {
+                if (ins.OpCode.Code is not (Code.Call or Code.Callvirt or Code.Newobj) || ins.Operand is not MethodReference r) continue;
+                var dt = r.DeclaringType.FullName;
+                if (dt == "UnityEngine.Object" && ObjectLookups.Contains(r.Name) || dt == "UnityEngine.GameObject" && GameObjectLookups.Contains(r.Name)
+                    || dt == "UnityEngine.Camera" && r.Name == "get_main")
+                    return $"{path} -> {r.DeclaringType.Name}.{r.Name}";
+                if (depth < 4 && ResolveM(r) is MethodDefinition d && d.Module == m.Module && Walk(d, path + " > " + d.Name, depth + 1) is string hit)
+                    return hit;
+            }
+            return null;
+        }
+        return Walk(awake, awake.DeclaringType.Name + ".Awake", 0);
+    }
+
+    // Name prefix of a Harmony patch method fix disabled because its target is gone:
+    // __RoundsCompat_Disabled_<target type>_<target method>_<original name>.
+    public const string DisabledPatch = "__RoundsCompat_Disabled_";
 
     // ---------------------------------------------------------------- plugin load
     public static bool IsDontDestroyOnLoad(Instruction ins) =>

@@ -103,6 +103,8 @@ Unity's own components (TextMeshPro, UI) are left to Unity, which upgrades their
 - Objects your plugin creates in `Awake`: BepInEx now starts plugins before the game loads its first scene, and that
   load destroys them, even with `DontDestroyOnLoad`. `fix` handles `DontDestroyOnLoad` calls made directly in `Awake`;
   if you create objects there some other way, set `hideFlags = HideFlags.DontSave` on them or create them in `Start`.
+  Looking up scene objects there (`FindObjectsOfType`, `GameObject.Find`, `Camera.main`) finds nothing for the same
+  reason; `fix` makes such an `Awake` run once the first scene has loaded.
 - Clashes between mods at runtime. Example: UnboundLib 4's card-pick stats panel calls `ResetStats` on components
   that aren't on any GameObject; a `ResetStats` prefix that calls `GetComponent` throws there. Guard patches that may
   run on such objects (`if (__instance == null) return;` is true for them in Unity).

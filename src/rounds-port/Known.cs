@@ -96,7 +96,10 @@ static class Known
         return note;
     }
 
-    public static Issue HarmonyTarget(HarmonyInfo h, string problem, bool damageSource)
+    // Ends the text of a [HarmonyPatch] whose target is gone, which fix disables.
+    public const string DisablesPatch = "fix disables this patch, so PatchAll doesn't stop at it (HarmonyX throws on a missing target, and the mod's later patches wouldn't apply)";
+
+    public static Issue HarmonyTarget(HarmonyInfo h, string problem, bool damageSource, bool ported)
     {
         var what = $"[HarmonyPatch] {h}";
         var type = h.Type?.FullName ?? h.TypeName;
@@ -110,10 +113,12 @@ static class Known
         switch (type, h.Method)
         {
             case ("CardChoice", "GetRanomCard"): return new(Fix.Auto, "harmony", what, "the typo was fixed: GetRandomCard");
-            case ("TrickShot", "Awake"): return new(Fix.Manual, "harmony", what, "TrickShot has no Awake now; its setup moved to Start, and trail is an IScaleTrailFromDamage");
-            case ("ChangeColor", "Start"): return new(Fix.Manual, "harmony", what, "ChangeColor is now an empty marker component; drop this patch");
-            case ("CardBar", "Update"): return new(Fix.Manual, "harmony", what, "CardBar has no Update now: nothing on it runs every frame (CardBarHandler.Update only handles d-pad input). Move this code to an Update of your own. HarmonyX throws on this patch and PatchAll stops there, so patches after it in the mod don't apply either");
+            case ("TrickShot", "Awake"): return new(Fix.Review, "harmony", what, "TrickShot has no Awake now; its setup moved to Start, and trail is an IScaleTrailFromDamage. " + DisablesPatch + "; what it did is lost");
+            case ("ChangeColor", "Start"): return new(Fix.Review, "harmony", what, "ChangeColor is now an empty marker component. " + DisablesPatch);
+            case ("CardBar", "Update"): return new(Fix.Review, "harmony", what, "CardBar has no Update now: nothing on it runs every frame (CardBarHandler.Update only handles d-pad input). " + DisablesPatch + "; rounds-port Runtime calls it every frame for each active CardBar instead, as Update did");
         }
+        if (ported && !problem.StartsWith("ambiguous"))
+            return new(Fix.Review, "harmony", what, problem + ". " + DisablesPatch + "; what it did is lost");
         return new(Fix.Manual, "harmony", what, problem);
     }
 }

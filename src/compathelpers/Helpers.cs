@@ -171,6 +171,22 @@ public static class __RoundsCompat
         if ((object)go != null) go.transform.root.gameObject.hideFlags |= HideFlags.DontSave;
     }
 
+    // A plugin Awake that looks up scene objects (FindObjectsOfType, Camera.main...). BepInEx now starts plugins before
+    // the game has loaded any scene; on the old game the first scene was there. Runs it once the first scene has loaded.
+    public static void AfterFirstScene(Action awake)
+    {
+        if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().isLoaded) { awake(); return; }
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += awake.OnFirstScene;
+    }
+
+    // Bound to the Awake it runs, so removing an equal delegate (same method, same Awake) unsubscribes it.
+    private static void OnFirstScene(this Action awake, UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= awake.OnFirstScene;
+        try { awake(); }
+        catch (Exception e) { Debug.LogException(e); }
+    }
+
     // PlayerManager.AddPlayerDiedAction(action) was removed; PlayerDiedAction is a public field now.
     public static void AddPlayerDiedAction(PlayerManager manager, Action<Player, int> action)
     {

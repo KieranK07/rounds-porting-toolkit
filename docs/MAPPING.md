@@ -111,6 +111,8 @@ Not changed by the update, but reported: `RPC("RPCA_AddSlow", ...)` with 1 argum
 behaviour.
 
 | `DontDestroyOnLoad(obj)` in a `BaseUnityPlugin`'s `Awake` or constructor | Plugins start at frame 0 with no scene loaded; loading "Main" destroys every object made before it, `DontDestroyOnLoad` or not (seen in game: MapsExtended's "Root Map Object Manager", which broke custom-map physics objects for every non-host player). Objects with `HideFlags.DontSave` survive | `__RoundsCompat.KeepAlive(obj)`: `DontDestroyOnLoad` plus `DontSave` on the root GameObject |
+| A plugin's `Awake` that reaches `FindObjectsOfType`, `GameObject.Find`, `Camera.main`... (its own methods, a few calls deep) | No scene is loaded yet at plugin load, so these find nothing (ToggleEffectsMod's `Post_Main` volume: NRE, and its menu never registers). On the old game the first scene was there | `Awake` hands its body (now `Awake__RoundsCompat`) to `__RoundsCompat.AfterFirstScene`, which runs it once the first scene has loaded |
+| `[HarmonyPatch]` whose target the game, Unity, Photon or Bknibb's UnboundLib/RWF no longer has (`CardBar.Update`, `ChangeColor.Start`, `TrickShot.Awake`...) | HarmonyX throws on the missing target and `PatchAll` stops, so the mod's later patches don't apply either | Disabled: the attribute naming the target is removed and the patch method renamed `__RoundsCompat_Disabled_<type>_<method>_<name>` (REVIEW: what it did is lost). rounds-port Runtime calls `CardBar.Update` ones every frame for each active `CardBar` |
 
 The scanner now also follows HarmonyX: several complete `[HarmonyPatch]` attributes on one method are separate
 targets (`AttributePatch.Create`), not one merged target.
