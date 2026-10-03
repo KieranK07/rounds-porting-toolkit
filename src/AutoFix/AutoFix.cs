@@ -11,7 +11,7 @@ using Mono.Cecil;
 sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
 {
     public sealed record Settings(string GameDir, string Managed, string Core, string Plugins, string Cache,
-        bool FixWhenManualLeft, string[] Exclude, string[] FixAnyway);
+        bool LeaveManualMods, string[] Exclude, string[] FixAnyway);
 
     sealed class Entry
     {
@@ -33,7 +33,7 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
     {
         string gameMvid;
         using (var m = ModuleDefinition.ReadModule(Path.Combine(settings.Managed, "Assembly-CSharp.dll"))) gameMvid = m.Mvid.ToString();
-        return string.Join(" ", typeof(AutoFix).Assembly.ManifestModule.ModuleVersionId, gameMvid, settings.FixWhenManualLeft,
+        return string.Join(" ", typeof(AutoFix).Assembly.ManifestModule.ModuleVersionId, gameMvid, settings.LeaveManualMods,
             string.Join(",", settings.Exclude), string.Join(",", settings.FixAnyway));
     }
 
@@ -104,8 +104,10 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
                            "(github.com/Bknibb/UnboundLib, github.com/Bknibb/RoundsWithFriends). Mods aren't fixed against it");
         int Count(string r) => next.Values.Count(e => e.Result == r);
         var mods = next.Count - Count(NotMod) - Count(Old);
-        var summary = $"{mods} mods: {Count(Fixed)} fixed, {Count(Unchanged)} need nothing";
-        if (Count(Manual) > 0) summary += $", {Count(Manual)} left as they are (problems only their authors can fix)";
+        int partly = next.Values.Count(e => e.Result == Fixed && e.Note.Length > 0);
+        var summary = $"{mods} mods: {Count(Fixed)} fixed" + (partly > 0 ? $" ({partly} with problems only their authors can fix)" : "") +
+                      $", {Count(Unchanged)} need nothing";
+        if (Count(Manual) > 0) summary += $", {Count(Manual)} left as they are (LeaveManualMods)";
         if (Count(Excluded) > 0) summary += $", {Count(Excluded)} excluded";
         if (Count(Error) > 0) summary += $", {Count(Error)} with errors";
         if (Count(Old) > 0) summary += $"; {Count(Old)} old librar{(Count(Old) == 1 ? "y" : "ies")} skipped";
@@ -167,10 +169,10 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
         var fixedBytes = ms.ToArray();
         var left = scanner.Scan(ModuleDefinition.ReadModule(new MemoryStream(fixedBytes), rp));
         var manual = left.Where(i => i.Fix == Fix.Manual).ToList();
-        if (manual.Count > 0 && !settings.FixWhenManualLeft && !Matches(rel, settings.FixAnyway))
+        if (manual.Count > 0 && settings.LeaveManualMods && !Matches(rel, settings.FixAnyway))
         {
             var note = $"{manual.Count} MANUAL item{(manual.Count == 1 ? "" : "s")}: " + string.Join("; ", manual.Take(3).Select(i => i.What)) + (manual.Count > 3 ? "; ..." : "");
-            log.LogWarning($"left {rel} as it is: {note}. Only its author can fix these (FixAnyway in rounds-port.autofix.cfg rewrites it anyway)");
+            log.LogWarning($"left {rel} as it is (LeaveManualMods): {note}");
             return Done(Manual, OneLine(note));
         }
 
@@ -186,10 +188,12 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
             return new Entry { Sha = sha, Orig = origSha, Result = Error, Note = OneLine("can't write: " + ex.Message), Retry = true };
         }
         var review = left.Where(i => i.Fix == Fix.Review).Select(i => i.Kind).Distinct().ToList();
-        log.LogInfo($"fixed {rel}: {fixer.Changes.Count()} kind{(fixer.Changes.Count() == 1 ? "" : "s")} of change" +
-                    (review.Count > 0 ? $"; to check in game: {string.Join(", ", review)}" : "") +
-                    (manual.Count > 0 ? $"; {manual.Count} MANUAL item{(manual.Count == 1 ? "" : "s")} left" : ""));
-        return new Entry { Sha = fixedSha, Orig = origSha, Result = Fixed };
+        var line = $"fixed {rel}: {fixer.Changes.Count()} kind{(fixer.Changes.Count() == 1 ? "" : "s")} of change" +
+                   (review.Count > 0 ? $"; to check in game: {string.Join(", ", review)}" : "");
+        if (manual.Count == 0) log.LogInfo(line);
+        else log.LogWarning(line + $"; {manual.Count} MANUAL item{(manual.Count == 1 ? "" : "s")} left, which only its author can fix: " +
+                            string.Join("; ", manual.Take(3).Select(i => i.What)) + (manual.Count > 3 ? "; ..." : ""));
+        return new Entry { Sha = fixedSha, Orig = origSha, Result = Fixed, Note = manual.Count > 0 ? $"{manual.Count} MANUAL left" : "" };
     }
 
     // Puts every fixed mod that is still our copy back to its original, and forgets the index.

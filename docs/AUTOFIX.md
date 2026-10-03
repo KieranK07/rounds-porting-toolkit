@@ -19,7 +19,8 @@ At each start, before any plugin loads:
 - Every DLL in `BepInEx/plugins` that uses the game or UnboundLib is scanned and fixed, like `rounds-port fix`.
 - A mod `fix` changes is **replaced in place** by the fixed copy. The original goes to
   `BepInEx/cache/rounds-port/originals/<sha256>.dll`.
-- A mod that still has MANUAL items after fixing is **left as it is** (see `FixWhenManualLeft`).
+- A mod with MANUAL items (problems only its author can fix) still gets everything else fixed, and the log names
+  what's left. Left alone, it would fail on the fixable problems too (see `LeaveManualMods`).
 - The results go into `BepInEx/cache/rounds-port/index.tsv`. A start with no new or updated mods reads none of them
   (about 50 ms for 100 mods). The first start after installing 100 mods takes about 4 s.
 - A new version of AutoFix, a game update or a settings change re-checks every mod, starting from its original.
@@ -47,8 +48,8 @@ One line per mod in `BepInEx/LogOutput.log`, from source `rounds-port`:
 | `Enabled` | true | |
 | `Exclude` | | DLL or folder names never to touch, comma-separated. A mod fixed earlier gets its original back. |
 | `RestoreOriginals` | false | Puts every original back at the next start, then sets `Enabled = false`. |
-| `FixWhenManualLeft` | false | Also rewrite mods with MANUAL items left. They load, but those parts may still fail. |
-| `FixAnyway` | | Like `FixWhenManualLeft`, for the mods listed. |
+| `LeaveManualMods` | false | Leave mods with MANUAL items exactly as they are instead. |
+| `FixAnyway` | | With `LeaveManualMods` on: mods to fix anyway. |
 
 To undo everything: `RestoreOriginals = true`, start the game once. Deleting `BepInEx/cache` loses the originals; the
 fixed mods then stay fixed until the mod manager reinstalls them.
