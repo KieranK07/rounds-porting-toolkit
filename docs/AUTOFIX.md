@@ -26,7 +26,9 @@ At each start, before any plugin loads:
 - When a mod manager updates or reinstalls a mod, the new file is fixed again.
 - Files are swapped by renaming, never written into. Gale hard-links mods to its download cache, and that copy stays
   the original.
-- UnboundLib 3, MMHook and RoundsWithFriends 2 folders are skipped with a warning: use Bknibb's ports.
+- Old builds of UnboundLib (3.x) and RoundsWithFriends (2.x), and the MMHOOK made for the old game, are skipped with
+  a warning: use Bknibb's ports. They're recognised by what's in the file, not the folder name, so Bknibb's files
+  installed into the old packages' folders are used.
 
 One line per mod in `BepInEx/LogOutput.log`, from source `rounds-port`:
 

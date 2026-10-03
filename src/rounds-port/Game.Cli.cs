@@ -5,6 +5,9 @@ using Mono.Cecil;
 // downloaded from Thunderstore. The load-time patcher builds without this file.
 sealed partial class Game
 {
+    // Thunderstore packages that only have builds for the old game; Bknibb's ports replace them. sweep leaves them out.
+    public static readonly string[] OldPackages = { "willis81808-UnboundLib", "willis81808-MMHook", "olavim-RoundsWithFriends" };
+
     // installedMods: false leaves out BepInEx/plugins and mod-manager profiles (sweep: same results on every machine).
     public Game(string? dir, IEnumerable<string> refs, IEnumerable<string> inputs, bool installedMods = true)
     {

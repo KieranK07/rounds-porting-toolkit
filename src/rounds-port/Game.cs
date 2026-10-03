@@ -10,9 +10,6 @@ sealed partial class Game
     public readonly ModuleDefinition AssemblyCSharp;
     public string? UnboundLib;   // "4.2.5 (path)" when found
 
-    // Old packages that are known not to work on the 2025 build and would shadow their replacements.
-    public static readonly string[] OldPackages = { "willis81808-UnboundLib", "willis81808-MMHook", "olavim-RoundsWithFriends" };
-
     // For the load-time patcher (src/AutoFix): BepInEx's own paths. Under a mod manager, plugins is in its profile.
     public Game(string dir, string managed, string core, string plugins)
     {
@@ -46,13 +43,13 @@ sealed partial class Game
 
     // Adds every DLL under dir. When two files have the same assembly name, the higher version wins
     // (so Bknibb's UnboundLib 4 beats an old 3.x copy), and MMHOOK sits next to the UnboundLib that won.
+    // skipOld: leaves out the old libraries (OldLibrary), for installed mods.
     void AddTree(string dir, bool skipOld)
     {
         if (!Directory.Exists(dir)) return;
         var files = Directory.GetFiles(dir, "*.dll", SearchOption.AllDirectories)
-            .Where(f => !skipOld || !OldPackages.Any(o => f.Substring(dir.Length).TrimStart('/', '\\').StartsWith(o, StringComparison.OrdinalIgnoreCase)))
             .Select(f => (path: f, name: MapResolver.ReadName(f)))
-            .Where(x => x.name != null)
+            .Where(x => x.name != null && !(skipOld && OldLibrary(x.path, x.name) != null))
             .GroupBy(x => x.name!.Name, StringComparer.OrdinalIgnoreCase);
         string? unboundDir = null;
         foreach (var g in files.OrderBy(g => g.Key == "UnboundLib" ? 0 : 1))
@@ -63,6 +60,24 @@ sealed partial class Game
             Resolver.Add(best.path);
             if (g.Key == "UnboundLib") unboundDir = Path.GetDirectoryName(Resolver.Path("UnboundLib"));
         }
+    }
+
+    // An old build of a library the 2025 update broke, which would shadow its port: UnboundLib 3, RoundsWithFriends 2,
+    // or an MMHOOK made against the old Assembly-CSharp (willis81808-MMHook). Returns what it is, or null. Decided by
+    // content, never by folder: a mod manager may put Bknibb's ports into the old packages' folders.
+    public static string? OldLibrary(string path, AssemblyNameDefinition name)
+    {
+        if ((name.Name == "UnboundLib" && name.Version.Major < 4) || (name.Name == "RoundsWithFriends" && name.Version.Major < 3))
+            return $"{name.Name} {name.Version.ToString(3)}";
+        if (name.Name != "MMHOOK_Assembly-CSharp") return null;
+        // Player.SetPlayerID is new in the 2025 build: an MMHOOK made against it has a hook for it
+        try
+        {
+            using var m = ModuleDefinition.ReadModule(path);
+            if (m.GetType("On.Player") is TypeDefinition p && !p.NestedTypes.Any(t => t.Name == "hook_SetPlayerID")) return "an MMHOOK for the old game";
+        }
+        catch { }
+        return null;
     }
 
     public static string? ManagedDir(string game)

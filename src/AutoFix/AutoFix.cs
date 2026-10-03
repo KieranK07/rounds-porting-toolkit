@@ -21,7 +21,7 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
     }
 
     // index results
-    const string Fixed = "fixed", Unchanged = "unchanged", NotMod = "not-a-mod", Manual = "manual", Excluded = "excluded", Error = "error";
+    const string Fixed = "fixed", Unchanged = "unchanged", NotMod = "not-a-mod", Manual = "manual", Excluded = "excluded", Error = "error", Old = "old";
 
     readonly string indexPath = Path.Combine(settings.Cache, "index.tsv");
     readonly string originals = Path.Combine(settings.Cache, "originals");
@@ -41,11 +41,7 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
     {
         var clock = Stopwatch.StartNew();
         Directory.CreateDirectory(settings.Cache);
-        var (files, old) = PluginFiles();
-        foreach (var o in old)
-            log.LogWarning($"BepInEx/plugins/{o} is a package that doesn't work on the current game (UnboundLib 3, MMHook or RoundsWithFriends 2). " +
-                           "Use Bknibb's ports instead (github.com/Bknibb/UnboundLib, github.com/Bknibb/RoundsWithFriends). Mods aren't fixed against it");
-
+        var files = PluginFiles();
         var key = Key();
         var (oldKey, index) = ReadIndex();
         if (oldKey == key + " old-game") { log.LogInfo("this is the old game build (old-rounds-for-mods): mods work on it as they are"); return; }
@@ -103,12 +99,16 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
                 if (!keep.Contains(Path.GetFileNameWithoutExtension(f))) TryDelete(f);
         if (todo.Count > 0 || next.Count != index.Count) WriteIndex(key, next);
 
+        foreach (var kv in next.Where(kv => kv.Value.Result == Old))
+            log.LogWarning($"BepInEx/plugins/{kv.Key} is {kv.Value.Note}, which doesn't work on the current game: use Bknibb's port " +
+                           "(github.com/Bknibb/UnboundLib, github.com/Bknibb/RoundsWithFriends). Mods aren't fixed against it");
         int Count(string r) => next.Values.Count(e => e.Result == r);
-        var mods = next.Count - Count(NotMod);
+        var mods = next.Count - Count(NotMod) - Count(Old);
         var summary = $"{mods} mods: {Count(Fixed)} fixed, {Count(Unchanged)} need nothing";
         if (Count(Manual) > 0) summary += $", {Count(Manual)} left as they are (problems only their authors can fix)";
         if (Count(Excluded) > 0) summary += $", {Count(Excluded)} excluded";
         if (Count(Error) > 0) summary += $", {Count(Error)} with errors";
+        if (Count(Old) > 0) summary += $"; {Count(Old)} old librar{(Count(Old) == 1 ? "y" : "ies")} skipped";
         log.LogInfo($"{summary} ({clock.ElapsedMilliseconds} ms)");
         if (todo.Count == 0)
             foreach (var kv in next.Where(kv => kv.Value.Result is Manual or Error))
@@ -146,7 +146,10 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
         {
             // the same DLLs the CLI picks from a folder (Program.Expand): ones that use the game or UnboundLib
             using (var peek = ModuleDefinition.ReadModule(new MemoryStream(orig)))
+            {
+                if (peek.Assembly != null && Game.OldLibrary(path, peek.Assembly.Name) is string old) return Done(Old, old);
                 if (!peek.AssemblyReferences.Any(a => a.Name is "Assembly-CSharp" or "UnboundLib") || peek.Name.StartsWith("MMHOOK")) return Done(NotMod);
+            }
             module = ModuleDefinition.ReadModule(new MemoryStream(orig), rp);
         }
         catch (Exception ex)
@@ -213,13 +216,11 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
     // The file on disk is our fixed copy, not the original.
     static bool IsCopy(Entry e) => e.Orig.Length > 0 && e.Sha != e.Orig;
 
-    // Every *.dll under plugins (paths relative to it, sorted), and the old packages that are skipped.
-    // Also finishes a replace that was interrupted (see Replace).
-    (List<(string rel, FileInfo fi)> files, List<string> old) PluginFiles()
+    // Every *.dll under plugins (paths relative to it, sorted). Also finishes a replace that was interrupted (see Replace).
+    List<(string rel, FileInfo fi)> PluginFiles()
     {
         var files = new List<(string, FileInfo)>();
-        var old = new SortedSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (!Directory.Exists(settings.Plugins)) return (files, old.ToList());
+        if (!Directory.Exists(settings.Plugins)) return files;
         foreach (var bak in Directory.GetFiles(settings.Plugins, "*.rpbak", SearchOption.AllDirectories))
         {
             var dll = bak.Substring(0, bak.Length - ".rpbak".Length);
@@ -231,13 +232,10 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
         foreach (var f in Directory.GetFiles(settings.Plugins, "*.dll", SearchOption.AllDirectories))
         {
             if (!f.EndsWith(".dll", StringComparison.OrdinalIgnoreCase)) continue;
-            var rel = f.Substring(settings.Plugins.Length).TrimStart('/', '\\');
-            var top = rel.Split('/', '\\')[0];
-            if (Game.OldPackages.Any(o => top.StartsWith(o, StringComparison.OrdinalIgnoreCase))) { old.Add(top); continue; }
-            files.Add((rel, new FileInfo(f)));
+            files.Add((f.Substring(settings.Plugins.Length).TrimStart('/', '\\'), new FileInfo(f)));
         }
         files.Sort((a, b) => string.CompareOrdinal(a.Item1, b.Item1));
-        return (files, old.ToList());
+        return files;
     }
 
     // A file name ("MapsExtended.dll" or "MapsExtended") or a folder name ("olavim-MapsExtended") anywhere in rel.
