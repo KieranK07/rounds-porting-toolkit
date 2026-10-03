@@ -97,6 +97,7 @@ When a mod unloads, its patches, cards, menus and events go with it, so the new 
 | `Steamworks.*` in Assembly-CSharp-firstpass | `com.rlabrecque.steamworks.net` | retargets the reference |
 | `UnityEngine.Input` in CoreModule | `UnityEngine.InputLegacyModule` | retargets the reference, also in `[HarmonyPatch(typeof(Input))]` |
 | `CardChoice.GetRanomCard` | `GetRandomCard` (typo fixed) | Harmony targets and strings |
+| UnboundLib 3's `Unbound.RegisterMaps(...)` | removed in UnboundLib 4 | `LevelManager.RegisterMaps(..., "Modded")`, which is what it forwarded to |
 | Harmony `___field` / reflection `"field"` that became `m_field` | renamed | renames it (REVIEW) |
 
 Helpers are copied into your mod as an internal `__RoundsCompat` class (source: `src/compathelpers`), so the fixed DLL
@@ -116,9 +117,10 @@ frames saved before localization, and shaders that draw pink on macOS.
 - On the 12 mods ported for [rounds-mac-modpack](https://github.com/KieranK07/rounds-mac-modpack), `fix` reproduces 8
   byte for byte (Cosmic Rounds, Classes Manager Reborn, RarityLib, ModsPlus, Will's Wacky Map Objects, CardBarPatch,
   GunUnblockablePatch, TemporaryStatsPatch). For the other 4 it fixes the mechanical parts and flags the rest.
-- The 100 most-downloaded Thunderstore mods (October 2026): no crashes, and after `fix` 82 of 98 have nothing left
-  in the report (UnboundLib 3 and RoundsWithFriends 2 are left out: Bknibb's ports replace them). What's left for the
-  other 16 is real work: object pooling, removed RoundsWithFriends UI, Odin Serializer, reflection into the Unity editor.
+- The 100 most-downloaded Thunderstore mods (October 2026): no crashes, and after `fix` 73 of 98 have nothing left
+  in the report and 8 more only REVIEW items (card frames in asset bundles). UnboundLib 3 and RoundsWithFriends 2 are
+  left out: Bknibb's ports replace them. What's left for the other 17 is real work: object pooling, the player spotlight
+  RoundsWithFriends 3 dropped, Odin Serializer, reflection into the Unity editor.
 - Cards+, KeysCards and ZOMC from Thunderstore: fixed with no MANUAL items, load in game, and swap in and out live.
 - It can't see behaviour changes that still compile (a pooled object reused while you hold it): those show in game.
 

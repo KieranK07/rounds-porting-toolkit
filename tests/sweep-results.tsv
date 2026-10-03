@@ -83,7 +83,7 @@ Zom_23-ZOMC	2.4.3	6/0/0	0/0/0	0	ZomC-Cards.dll=5a0396ee7c7242ad
 Root-Port_of_FFC	1.3.11	4/2/0	0/2/0	1	PFFC.dll=1022f3e96f0fe9f2
 Pykess-Faces_Plus	1.0.0	0/0/0	0/0/0	0	-
 BossSloth-LocalZoom	1.1.1	2/1/1	0/0/2	2	LocalZoom.dll=9cf5d275b71d30b7
-willis81808-MapsPlus	0.0.3	0/0/1	0/0/1	2	-
+willis81808-MapsPlus	0.0.3	1/0/0	0/0/0	0	MapsPlus.dll=d95c41c4aa91aad7
 willis81808-DeckSmithUtil	1.0.0	1/0/0	0/0/0	0	DeckSmithUtil.dll=2a8ae4f399a29fde
 Root-MorePicksPatch	1.0.2	0/0/0	0/0/0	0	-
 Root-Simple_Gamemodes	1.3.7	3/1/1	0/0/1	2	Simple_Gamemodes.dll=7f8fdc6b3eaac5d8

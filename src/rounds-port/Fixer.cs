@@ -198,6 +198,7 @@ sealed class Fixer
                     Count($"{md.DeclaringType.Name}.{md.Name}: DontDestroyOnLoad -> __RoundsCompat.KeepAlive (survives the first scene load)");
                 }
                 else if (ins.Operand is MethodReference pm && (ins.OpCode == OpCodes.Call || ins.OpCode == OpCodes.Callvirt) && OtherCall(il, ins, pm)) { }
+                else if (ins.Operand is MethodReference um && (ins.OpCode == OpCodes.Call || ins.OpCode == OpCodes.Callvirt) && UnboundCall(il, ins, um)) { }
                 else if (ins.Operand is MethodReference mr && (ins.OpCode == OpCodes.Call || ins.OpCode == OpCodes.Callvirt) && mr.DeclaringType.Scope.Name.StartsWith("Assembly-CSharp"))
                 {
                     var dt = mr.DeclaringType.FullName;
@@ -265,6 +266,31 @@ sealed class Fixer
                 return true;
         }
         return false;
+    }
+
+    // UnboundLib 3's obsolete Unbound.RegisterMaps forwarders, gone in UnboundLib 4. Each called LevelManager.RegisterMaps
+    // with the category "Modded" (the two-argument one ignored its categoryName), so fix makes that call. True when
+    // `ins` was rewritten.
+    bool UnboundCall(ILProcessor il, Instruction ins, MethodReference mr)
+    {
+        if (mr.Name != "RegisterMaps" || mr.DeclaringType.FullName != "UnboundLib.Unbound" || mr.DeclaringType.Scope.Name != "UnboundLib"
+            || mr.HasThis || mr.Resolve() != null) return false;
+        var sig = Sig(mr);
+        if (sig is not ("AssetBundle" or "IEnumerable`1" or "IEnumerable`1,String")) return false;
+        // Built on the mod's own UnboundLib reference: importing the resolved method would add a second reference to
+        // UnboundLib 4.
+        var lm = new TypeReference("UnboundLib.Utils", "LevelManager", M, mr.DeclaringType.Scope);
+        var target = new MethodReference("RegisterMaps", M.TypeSystem.Void, lm);
+        target.Parameters.Add(new ParameterDefinition(mr.Parameters[0].ParameterType));
+        target.Parameters.Add(new ParameterDefinition(M.TypeSystem.String));
+        if (target.Resolve() == null) return false;
+        var call = Instruction.Create(OpCodes.Call, target);
+        if (sig == "IEnumerable`1,String")
+            ReplaceWith(il, ins, Instruction.Create(OpCodes.Pop), Instruction.Create(OpCodes.Ldstr, "Modded"), call);
+        else
+            ReplaceWith(il, ins, Instruction.Create(OpCodes.Ldstr, "Modded"), call);
+        Count($"Unbound.RegisterMaps({sig.Replace("`1", "<string>")}) -> LevelManager.RegisterMaps(..., \"Modded\"), as UnboundLib 3 forwarded it");
+        return true;
     }
 
     // The old game had its own global Debug class (Log, LogError, LogWarning, DrawLine). UnityEngine.Debug has the

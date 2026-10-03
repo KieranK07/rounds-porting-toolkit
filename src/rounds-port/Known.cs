@@ -17,6 +17,9 @@ static class Known
         if (scope.StartsWith("Sirenix."))
             return new(Fix.Manual, "type", $"[{scope}] {name}",
                 "the game no longer ships Odin Serializer. Ship it with your mod (open-source: github.com/TeamSirenix/odin-serializer)");
+        if (scope == "RoundsWithFriends" && name is "RWF.UI.PlayerSpotlight" or "RWF.UI.FollowPlayer")
+            return new(Fix.Manual, "type", $"[{scope}] {name}",
+                "RoundsWithFriends 3 (Bknibb's port) dropped the player spotlight (the darkened screen with a light on each player between rounds) and has no replacement. Remove the calls; the game mode then runs like RWF 3's own modes, without that effect");
         if (scope == "UnboundLib" || scope == "MMHOOK_Assembly-CSharp")
             return new(Fix.Manual, "type", $"[{scope}] {name}", why + ". UnboundLib 4 (Bknibb's port) changed some APIs; check github.com/Bknibb/UnboundLib");
         return new(Fix.Manual, "type", $"[{scope}] {name}", why);
@@ -43,8 +46,14 @@ static class Known
                 case ("Photon.Realtime.RoomOptions", "MaxPlayers"): return new(Fix.Auto, "field", what, "a byte in the old Photon, an int now; fix uses the int field");
             }
         }
-        else if (m is MethodReference)
+        else if (m is MethodReference mref)
         {
+            if (type == "UnboundLib.Unbound" && name == "RegisterMaps")
+                return new(Fix.Auto, "method", what, mref.Parameters.Count == 2
+                    ? "UnboundLib 3's obsolete forwarder, gone in UnboundLib 4. It ignored categoryName and called LevelManager.RegisterMaps(paths, \"Modded\"); fix does the same"
+                    : "UnboundLib 3's obsolete forwarder, gone in UnboundLib 4; fix calls LevelManager.RegisterMaps(..., \"Modded\") as it did");
+            if (type == "RWF.NetworkConnectionHandlerExtensions" && name is "IsSearchingQuickMatch" or "SetSearchingQuickMatch" or "SetSearchingTwitch")
+                return new(Fix.Manual, "method", what, "RoundsWithFriends 3 removed it: the game keeps one m_searchingType now. Use GetSearchingType() / SetSearchingType(NetworkConnectionHandlerExtensions.SearchingType...)");
             if (type is "Damagable" or "HealthHandler" or "DamageOverTime" && DamageMethods.Contains(name))
                 return new(Fix.Auto, "method", what, "gained a trailing HealthHandler.DamageSource parameter; fix passes DamageSource.Player");
             if (type == "ObjectsToSpawn" && name == "SpawnObject")

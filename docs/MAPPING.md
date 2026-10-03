@@ -115,6 +115,21 @@ behaviour.
 The scanner now also follows HarmonyX: several complete `[HarmonyPatch]` attributes on one method are separate
 targets (`AttributePatch.Create`), not one merged target.
 
+## 7c. UnboundLib 3 → 4 and RoundsWithFriends 2 → 3 (Bknibb's ports)
+
+Public API of willis81808 UnboundLib 3.2.14 against Bknibb's 4.2.5: 7 of 517 types and members gone, none changed. Olavim
+RoundsWithFriends 2.2.2 against Bknibb's 3.0.10: 24 of 412 gone. Of all that, the 98 sweep mods (and the libraries they
+download) use 2 things; everything else they reference still resolves, and so do their 31 MMHOOK references.
+
+| Old | New | `fix` | Mods |
+|---|---|---|---|
+| `Unbound.RegisterMaps(AssetBundle)`, `RegisterMaps(IEnumerable<string>)`, `RegisterMaps(IEnumerable<string>, string)` (obsolete forwarders) | removed | `LevelManager.RegisterMaps(..., "Modded")`, as each forwarder called it (the two-argument one ignored its category) | MapsPlus |
+| `RWF.UI.PlayerSpotlight`, `RWF.UI.FollowPlayer` (the darkened screen with a light on each player) | removed, no replacement | MANUAL: remove the calls; RWF 3's own game modes run without it | Simple Gamemodes, Will's Wacky Game Modes |
+| `NetworkConnectionHandlerExtensions.IsSearchingQuickMatch`, `SetSearchingQuickMatch`, `SetSearchingTwitch` | the game keeps one `m_searchingType`; RWF 3 has `GetSearchingType`/`SetSearchingType` | MANUAL (no mod uses them) | none |
+
+Also gone, unused and not public API in practice: UnboundLib's `Patches.CardChoicePatchGetSourceCard` and
+`Patches.GM_ArmsRace_Patch_Start` classes.
+
 ## 8. Summary: ambiguous or no-equivalent
 
 1. `ChangeColor::Start` (PerformanceImprovements): no equivalent. Delete the patch.
