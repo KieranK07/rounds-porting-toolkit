@@ -3,6 +3,9 @@
 Port ROUNDS mods to the current game, **v1.1.2** (Unity 2022.3). That update renamed and removed game code most mods
 used (`playerID`, `teamID`, `maxHealth`, damage methods, card names...), so they stopped loading.
 
+**On a Mac, or want it all in one app?** [Gale for ROUNDS](https://github.com/KieranK07/gale) runs on Mac and Windows
+and does all of this for you: install mods as usual and press Launch.
+
 **Playing, not making mods?** Install the **Rounds Port** package with your mods (r2modman, Thunderstore Mod Manager
 or Gale). It swaps in Bknibb's UnboundLib and RoundsWithFriends ports and fixes old mods as the game starts:
 [thunderstore/README.md](thunderstore/README.md). Build it with `python scripts/package.py` (after building
