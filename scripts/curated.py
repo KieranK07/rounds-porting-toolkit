@@ -46,7 +46,7 @@ def main():
     for f in os.listdir(OUT): os.remove(os.path.join(OUT, f))
     rows, done = [], {}
     for line in open(os.path.join(SRC, "patches.tsv"), encoding="utf-8"):
-        path, before, after, name = line.rstrip("\n").split("\t")
+        path, before, after, name, *only = line.rstrip("\n").split("\t")
         if not path.lower().endswith(".dll"): continue
         out = name.replace(".bsdiff", ".bsdf")
         if out not in done:
@@ -56,7 +56,7 @@ def main():
             data = b"BSDIFFDF" + struct.pack("<qqq", len(packed[0]), len(packed[1]), size) + b"".join(packed)
             open(os.path.join(OUT, out), "wb").write(data)
             done[out] = (size, raw)
-        rows.append("\t".join((path.rsplit("/", 1)[-1], before, after, out)))
+        rows.append("\t".join((path.rsplit("/", 1)[-1], before, after, out, *only)))
     open(os.path.join(OUT, "patches.tsv"), "w", encoding="utf-8", newline="\n").write("\n".join(rows) + "\n")
 
     # check each rewritten patch on the file it's for, where the bench has a copy (store/ or a profile)
@@ -69,7 +69,7 @@ def main():
                 have.setdefault(hashlib.sha256(open(p, "rb").read()).hexdigest(), p)
     checked = 0
     for r in rows:
-        name, before, after, out = r.split("\t")
+        name, before, after, out = r.split("\t")[:4]
         if before in have:
             size, raw = done[out]
             assert hashlib.sha256(bspatch(open(have[before], "rb").read(), size, *raw)).hexdigest() == after, name

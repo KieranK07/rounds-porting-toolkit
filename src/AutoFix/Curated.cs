@@ -195,6 +195,9 @@ sealed class Curated(string cache, ManualLogSource log)
         }
     }
 
+    // ROUNDS has no Linux build (Linux players run the Windows one), so a Unix Mono is macOS
+    static bool OnMac => Environment.OSVersion.Platform is PlatformID.Unix or PlatformID.MacOSX;
+
     static Dictionary<string, Patch> ReadPatches()
     {
         var d = new Dictionary<string, Patch>(StringComparer.OrdinalIgnoreCase);
@@ -203,7 +206,9 @@ sealed class Curated(string cache, ManualLogSource log)
         foreach (var line in new StreamReader(s).ReadToEnd().Split('\n'))
         {
             var c = line.Split('\t');
-            if (c.Length == 4) d[c[0] + "\t" + c[1]] = new Patch(c[0], c[1], c[2], "curated/" + c[3]);   // two mods ship the same file
+            // a fifth column "macos": only there (UnboundLib's Windows-only "hold Left Shift" check)
+            if (c.Length >= 5 && c[4].Trim() == "macos" && !OnMac) continue;
+            if (c.Length >= 4) d[c[0] + "\t" + c[1]] = new Patch(c[0], c[1], c[2], "curated/" + c[3].Trim());   // two mods ship the same file
         }
         return d;
     }
