@@ -3,7 +3,7 @@
 Port ROUNDS mods to the current game, **v1.1.2** (Unity 2022.3). That update renamed and removed game code most mods
 used (`playerID`, `teamID`, `maxHealth`, damage methods, card names...), so they stopped loading.
 
-**On a Mac, or want it all in one app?** [Gale for ROUNDS](https://github.com/KieranK07/gale) runs on Mac and Windows
+**On a Mac, or want it all in one app?** [Crosswind](https://github.com/KieranK07/crosswind), a mod manager based on Gale, runs on Mac and Windows
 and does all of this for you: install mods as usual and press Launch.
 
 **Playing, not making mods?** Install the **Rounds Port** package with your mods (r2modman, Thunderstore Mod Manager
@@ -178,7 +178,7 @@ dotnet run --project src/rounds-port -c Release -- scan "C:\path\to\MyMod.dll"
 Other folders: `patches/` hand-made patches for specific mod releases ([patches/README.md](patches/README.md)),
 `data/old-libraries.tsv` every old UnboundLib, MMHook and RoundsWithFriends release by SHA-256, `thunderstore/` the
 Rounds Port package, `tests/` the sweep and the in-game bench ([tests/ingame](tests/ingame)). The
-[Gale fork](https://github.com/KieranK07/gale) and the [modpack](https://github.com/KieranK07/rounds-mac-modpack) take
+[Crosswind](https://github.com/KieranK07/crosswind) (the Gale fork) and the [modpack](https://github.com/KieranK07/rounds-mac-modpack) take
 AutoFix, the Runtime, the patches and the Odin stand-in from here.
 
 Game path: `C:\Program Files (x86)\Steam\steamapps\common\ROUNDS` or the macOS Steam folder by default; elsewhere,

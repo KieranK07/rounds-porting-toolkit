@@ -6,7 +6,7 @@ this checks what players see.
 
 Runs on Windows (the macOS scripts `launch.sh`, `batches.sh` and `isolate.sh` are the older Mac versions). Needs
 Python 3 with Pillow, a copy of ROUNDS with BepInEx in it for building the pilot, and a checkout of the
-[Gale fork](https://github.com/KieranK07/gale) next to this repo (or `GALE_DIR`) for profiles that use its ROUNDS layer.
+[Crosswind](https://github.com/KieranK07/crosswind) (the Gale fork) next to this repo (or `GALE_DIR`) for profiles that use its ROUNDS layer.
 Profiles, downloads (`store/`) and run output stay here and are not committed.
 
 | Command | Does |
