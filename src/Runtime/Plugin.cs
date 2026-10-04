@@ -231,6 +231,28 @@ namespace RoundsPort.Runtime
         }
     }
 
+    // A card's stat lines: the 2025 DrawCard takes the stat's name only from its LocalizedStat (a string-table entry),
+    // and mods fill the plain `stat` string, so on the current game their stats showed the amount with no name
+    // ("+30%" where the old game showed "+30% HP"). Those labels get the plain name back; game cards keep theirs.
+    [HarmonyPatch(typeof(CardInfoDisplayer), nameof(CardInfoDisplayer.DrawCard))]
+    internal static class StatNames_Fix
+    {
+        static void Postfix(CardInfoDisplayer __instance, CardInfoStat[] stats)
+        {
+            if (stats == null || stats.Length == 0 || __instance.grid == null || __instance.statObject == null) return;
+            // DrawCard adds one copy of statObject per stat, in order
+            var lines = new List<Transform>();
+            var copy = __instance.statObject.name + "(Clone)";
+            foreach (Transform t in __instance.grid.transform) if (t.name == copy) lines.Add(t);
+            for (int i = 0, first = lines.Count - stats.Length; i < stats.Length && first >= 0; i++)
+            {
+                var s = stats[i];
+                if (s == null || string.IsNullOrEmpty(s.stat) || (s.LocalizedStat != null && !s.LocalizedStat.IsEmpty)) continue;
+                if (lines[first + i].childCount > 0) lines[first + i].GetChild(0).GetComponent<UILocalizedString>()?.ResetReference(s.stat);
+            }
+        }
+    }
+
     // The game letterboxes to 16:9; on 16:10 screens (most Macs) nothing clears the bars, so old UI pixels ghost
     // there. A camera behind everything clears the whole screen to black. Also hosts the plugin's helper components.
     // DontSave keeps it through the first scene load, which destroys everything made before it.

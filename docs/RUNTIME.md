@@ -12,6 +12,7 @@ rounds-mac-modpack's Mac Compat Fixes is installed, BepInEx skips this plugin: t
 | Shaders (Metal only) | Mod asset bundles only have D3D11 shaders, so on macOS their cards and effects draw pink. Materials are pointed at the game's own Metal shaders, or rebuilt on `Particles/Standard Unlit` |
 | Letterbox | On 16:10 screens nothing clears the bars around the 16:9 picture, so old frames stay there |
 | Card names | UnboundLib's cards have no entry in the game's string table: titles show as the missing-translation text |
+| Stat names | Cards draw stat names from a localized string now; mods only set the plain `stat` text, so their stat lines showed the number with no name |
 | `GetSourceCard` | Picked cards don't always carry the `(Clone)` name UnboundLib looks for: empty card bar buttons |
 | Card bar hover | A button whose card was destroyed throws on hover |
 | Stats panel | UnboundLib 4.2.5's stats panel calls `ResetStats` on detached components; mods patching `ResetStats` throw, and the first card pick never shows |

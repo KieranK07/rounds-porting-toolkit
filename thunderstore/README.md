@@ -15,8 +15,8 @@ Install it next to your mods. Nothing to set up.
 - **Hand-made fixes** for exact versions that needed more: Cosmic Rounds 2.7.0, MapsExtended 1.4.2, ModdingUtils 0.4.8,
   Classes Manager Reborn 1.5.5, RarityLib 1.3.0, ModsPlus 1.6.2, Will's Wacky Map Objects 1.2.4, CardBarPatch 2.1.1,
   GunChargePatch 0.0.4, Performance Improvements 0.2.0, and a few small patches.
-- **In game:** fixes for problems that only show while playing. Card names showing as missing translations, empty
-  card bar buttons, the first card pick not showing, MapsExtended maps without their physics objects for clients,
+- **In game:** fixes for problems that only show while playing. Card names showing as missing translations, stat
+  lines without their names, empty card bar buttons, the first card pick not showing, MapsExtended maps without their physics objects for clients,
   modded cards out of sync between players online.
 
 Which of the 98 most-downloaded mods were tested and how they did:
