@@ -3,4 +3,5 @@
 *.dll binary
 *.pdb binary
 *.bsdf binary
+*.bsdiff binary
 *.png binary

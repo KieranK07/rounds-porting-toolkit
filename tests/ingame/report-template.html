@@ -1,0 +1,155 @@
+<title>ROUNDS Pilot Runs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --bg: #eef0f4; --surface: #ffffff; --ink: #181b23; --muted: #5b6273; --line: #d7dbe4;
+  --orange: #d9531e; --blue: #2c63c9;
+  --ok: #2f8a57; --bad: #c43b3b; --warn: #a86b12;
+  --display: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --body: "IBM Plex Sans", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #11131a; --surface: #191c25; --ink: #e7e9ef; --muted: #9aa1b1; --line: #2a2f3c;
+    --orange: #f0763f; --blue: #6f9bf2; --ok: #5cc28a; --bad: #ef6b6b; --warn: #e0a64a;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #11131a; --surface: #191c25; --ink: #e7e9ef; --muted: #9aa1b1; --line: #2a2f3c;
+  --orange: #f0763f; --blue: #6f9bf2; --ok: #5cc28a; --bad: #ef6b6b; --warn: #e0a64a;
+}
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 var(--body); padding-inline: 16px; }
+main { max-width: 1100px; margin: 0 auto; padding-block: 32px 64px; display: grid; gap: 40px; }
+h1, h2, h3 { font-family: var(--display); font-weight: 700; text-wrap: balance; margin: 0; letter-spacing: .01em; }
+h1 { font-size: clamp(34px, 6vw, 52px); line-height: 1; text-transform: uppercase; }
+h1 .vs { color: var(--orange); }
+h1 .vs + .vs { color: var(--blue); }
+h2 { font-size: 26px; text-transform: uppercase; }
+h3 { font-size: 20px; }
+header { display: grid; gap: 10px; }
+header p, section > p { max-width: 68ch; margin: 0; color: var(--muted); }
+section { display: grid; gap: 14px; }
+.muted { color: var(--muted); }
+
+.runs { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.run { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 16px; display: grid; gap: 10px; align-content: start; }
+.run dl { display: flex; gap: 20px; margin: 0; flex-wrap: wrap; }
+.run dt { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.run dd { margin: 0; font: 700 30px/1 var(--display); font-variant-numeric: tabular-nums; }
+.run .mods { margin: 0; font-size: 13px; color: var(--muted); }
+
+.err { background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+.err + .err { margin-top: -6px; }
+.err summary { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; list-style: none; }
+.err summary::-webkit-details-marker { display: none; }
+.err summary:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.err summary b { font-weight: 600; flex: 1; overflow-wrap: anywhere; }
+.err .n { font: 600 13px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.tag { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; padding: 2px 8px; border-radius: 99px; border: 1px solid currentColor; white-space: nowrap; }
+.err[data-kind="open"] .tag { color: var(--bad); }
+.err[data-kind="port"] .tag { color: var(--bad); }
+.err[data-kind="mod"] .tag { color: var(--warn); }
+.err[data-kind="game"] .tag, .err[data-kind="bench"] .tag { color: var(--muted); }
+.err > p { margin: 0; padding: 0 14px 8px; max-width: 75ch; }
+.err ul { margin: 0; padding: 0 14px 14px; list-style: none; display: grid; gap: 8px; }
+.err li { display: grid; gap: 2px; font-size: 13px; }
+.err .where { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.err code { font: 13px/1.45 var(--mono); overflow-wrap: anywhere; }
+.err .ctx { font: 12px/1.45 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.err .more { color: var(--muted); }
+
+.findings { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.findings li { display: grid; grid-template-columns: 6.5rem 1fr; gap: 12px; align-items: baseline; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+.findings p { margin: 0; max-width: 75ch; }
+.findings .tag { justify-self: start; }
+.findings .tag[data-s="Fixed"] { color: var(--ok); }
+.findings .tag[data-s="Open"] { color: var(--bad); }
+.findings .tag[data-s="Test only"], .findings .tag[data-s="Explained"] { color: var(--muted); }
+.findings .tag[data-s="New"] { color: var(--blue); }
+@media (max-width: 480px) { .findings li { grid-template-columns: 1fr; gap: 6px; } }
+.verdict { font-weight: 600; margin: 0; }
+.verdict.ok { color: var(--ok); }
+.verdict.bad { color: var(--bad); }
+.scroll { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); font-weight: 500; position: sticky; top: 0; background: var(--surface); }
+td:nth-child(3) { min-width: 260px; }
+tr.diff td { color: var(--bad); }
+td s { color: var(--muted); }
+
+.filters { display: flex; flex-wrap: wrap; gap: 6px; }
+.filters button { font: 500 13px var(--body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 99px; padding: 4px 12px; cursor: pointer; text-transform: capitalize; }
+.filters button[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.filters button:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+.gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+figure { margin: 0; display: grid; gap: 6px; }
+figure img { display: block; width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; background: var(--line); }
+.shot { display: block; padding: 0; border: 0; background: none; cursor: zoom-in; border-radius: 4px; }
+.shot:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
+dialog.viewer { padding: 0; border: 0; background: transparent; max-width: min(96vw, 1280px); }
+dialog.viewer::backdrop { background: rgb(0 0 0 / .8); }
+dialog.viewer img { display: block; width: 100%; border-radius: 4px; cursor: zoom-out; }
+dialog.viewer p { color: #e7e9ef; margin: 8px 0 0; font-size: 13px; }
+figcaption { font-size: 12px; display: grid; overflow-wrap: anywhere; }
+figcaption span { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+</style>
+
+<main>
+  <header>
+    <h1>ROUNDS pilot runs: <span class="vs">AI</span> vs <span class="vs">AI</span></h1>
+    <p>Real matches on the 2025 game with the port's fixes in place, played by the game's own AI with no one at the keyboard. Every point ends in a pick phase, and the first card offered is the next card to test. Online runs are two copies of the game in one RoundsWithFriends private room.</p>
+  </header>
+
+  <section>
+    <h2>What the runs found</h2>
+    <ul class="findings">{{FINDINGS}}</ul>
+  </section>
+
+  <section>
+    <h2>Runs</h2>
+    <div class="runs">{{RUNS}}</div>
+  </section>
+
+  <section>
+    <h2>Errors by source</h2>
+    <p>Grouped by the mod that threw, taken from the first mod frame in the stack. Lines with no stack are grouped under the card picked last.</p>
+    <div>{{ERRORS}}</div>
+  </section>
+
+  <section>
+    <h2>Desync check</h2>
+    <p>Each copy records every player's cards, max health and damage one second into each battle, plus the map and how many colliders it has. Both copies should agree on all of it.</p>
+    {{DESYNC}}
+  </section>
+
+  <section>
+    <h2>Screenshots</h2>
+    <div class="filters" role="group" aria-label="Screenshot type"><button type="button" data-k="" aria-pressed="true">all</button>{{FILTERS}}</div>
+    <div class="gallery">{{GALLERY}}</div>
+  </section>
+</main>
+<dialog class="viewer" id="viewer"><img alt=""><p></p></dialog>
+
+<script>
+const buttons = document.querySelectorAll('.filters button');
+buttons.forEach(b => b.addEventListener('click', () => {
+  buttons.forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  document.querySelectorAll('.gallery figure').forEach(f => { f.hidden = !!b.dataset.k && f.dataset.k !== b.dataset.k; });
+}));
+const viewer = document.getElementById('viewer');
+document.querySelector('.gallery').addEventListener('click', e => {
+  const shot = e.target.closest('.shot');
+  if (!shot) return;
+  const img = shot.querySelector('img');
+  viewer.querySelector('img').src = img.src;
+  viewer.querySelector('p').textContent = img.alt;
+  viewer.showModal();
+});
+viewer.addEventListener('click', () => viewer.close());
+</script>

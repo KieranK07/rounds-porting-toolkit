@@ -1,0 +1,44 @@
+<title>Old Beta vs 2025</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500&display=swap">
+<style>
+:root {
+  --bg: #f3f1ee; --surface: #ffffff; --ink: #1d1b1a; --muted: #6b6560; --line: #ddd6cf;
+  --old: #2f7fd8; --new: #e8661a;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --bg: #16181c; --surface: #1f2228; --ink: #ecebe8; --muted: #a29d97; --line: #343840; --old: #63a6f0; --new: #f0894b; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --bg: #16181c; --surface: #1f2228; --ink: #ecebe8; --muted: #a29d97; --line: #343840; --old: #63a6f0; --new: #f0894b; color-scheme: dark; }
+body { background: var(--bg); color: var(--ink); font: 15px/1.55 "IBM Plex Sans", system-ui, sans-serif; padding-inline: 16px; }
+main { max-width: 1240px; margin: 0 auto; padding-block: 32px 64px; display: grid; gap: 28px; }
+h1, h2 { font-family: "Barlow Condensed", "Arial Narrow", sans-serif; text-wrap: balance; margin: 0; }
+h1 { font-size: 2.4rem; letter-spacing: .01em; }
+h2 { font-size: 1.35rem; display: flex; align-items: baseline; gap: 10px; }
+h2 small { font: 500 .75rem "IBM Plex Sans", sans-serif; color: var(--muted); letter-spacing: .06em; text-transform: uppercase; }
+.intro { max-width: 70ch; display: grid; gap: 12px; }
+.intro p, .intro ul { margin: 0; }
+.intro ul { padding-left: 1.2em; display: grid; gap: 6px; }
+section { display: grid; gap: 10px; padding-top: 18px; border-top: 1px solid var(--line); }
+.pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 720px) { .pair { grid-template-columns: 1fr; } }
+figure { margin: 0; display: grid; gap: 6px; }
+figure img { width: 100%; height: auto; border-radius: 6px; display: block; background: #000; }
+figcaption { font-size: .78rem; font-weight: 500; letter-spacing: .06em; text-transform: uppercase; }
+figure:first-child figcaption { color: var(--old); }
+figure:last-child figcaption { color: var(--new); }
+</style>
+<main>
+  <header class="intro">
+    <h1>Old beta vs 2025, same cards</h1>
+    <p>{{COUNT}} cards, each captured on both builds in a real AI match: left is the <code>old-rounds-for-mods</code> beta with the mods untouched, right is the current game with Rounds Port.</p>
+    <ul>
+      <li><strong>Same on both:</strong> card art, titles, descriptions, stat lines, rarity colours, the card bar, players and maps.</li>
+      <li><strong>Fixed for this comparison:</strong> on 2025, stat lines on mod cards had no names (the number showed, "Max charge" didn't), and Map Embiggener left the whole screen grey. Both now look like the old beta.</li>
+      <li><strong>Only on 2025:</strong> the "Other Stats / Gun Stats" bar at the bottom. It comes from UnboundLib 4, the version the current game needs.</li>
+      <li><strong>Not real differences:</strong> the old build ignores the test's 1280×720 window and runs at 4K, so its text is sharper, and Pick Timer (which places its clock by screen width in pixels) draws the clock lower on it. The other offered cards and the card bar differ because each match goes its own way.</li>
+    </ul>
+  </header>
+  {{ROWS}}
+</main>

@@ -1,0 +1,10 @@
+# test data and run output (profiles hard-link into store/)
+profiles/
+store/
+__pycache__/
+*.log
+*.err
+# one-off run queues
+chain*.sh
+chain*.ps1
+oldchain.sh

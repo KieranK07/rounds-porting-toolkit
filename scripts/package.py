@@ -10,7 +10,7 @@ import json, os, sys, zipfile
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 TS = os.path.join(ROOT, "thunderstore")
-ODIN = os.path.join(ROOT, "..", "gale-mac", "src-tauri", "resources", "rounds", "files", "odin")
+ODIN = os.path.join(ROOT, "odin")
 BIN = lambda p, f: os.path.join(ROOT, "src", p, "bin", "Release", "net472", f)
 
 FILES = {

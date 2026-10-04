@@ -1,7 +1,7 @@
-"""Copies the curated patch table (the Gale fork's resources/rounds, from rounds-mac-modpack) into src/AutoFix/curated,
-so AutoFix applies the same hand-made fixes for players on other mod managers.
+"""Copies the hand-made patches (patches/: patches.tsv and the BSDIFF40 files) into src/AutoFix/curated, so AutoFix
+applies them for players on any mod manager.
 
-    python scripts/curated.py [<gale-mac>/src-tauri/resources/rounds]
+    python scripts/curated.py
 
 .NET Framework has no bzip2, so each BSDIFF40 patch is rewritten as BSDIFFDF: the same layout with raw deflate blocks
 (Curated.Bspatch reads it). Only .dll patches: the .pdb/.mdb ones only add line numbers to stack traces.
@@ -9,7 +9,7 @@ so AutoFix applies the same hand-made fixes for players on other mod managers.
 import bz2, hashlib, os, struct, sys, zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SRC = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "..", "..", "gale-mac", "src-tauri", "resources", "rounds")
+SRC = os.path.join(HERE, "..", "patches")
 OUT = os.path.join(HERE, "..", "src", "AutoFix", "curated")
 
 
@@ -50,7 +50,7 @@ def main():
         if not path.lower().endswith(".dll"): continue
         out = name.replace(".bsdiff", ".bsdf")
         if out not in done:
-            size, raw = blocks(open(os.path.join(SRC, "patches", name), "rb").read())
+            size, raw = blocks(open(os.path.join(SRC, name), "rb").read())
             raw = [bz2.decompress(b) for b in raw]
             packed = [deflate(b) for b in raw]
             data = b"BSDIFFDF" + struct.pack("<qqq", len(packed[0]), len(packed[1]), size) + b"".join(packed)
@@ -60,7 +60,7 @@ def main():
     open(os.path.join(OUT, "patches.tsv"), "w", encoding="utf-8", newline="\n").write("\n".join(rows) + "\n")
 
     # check each rewritten patch on the file it's for, where the bench has a copy (store/ or a profile)
-    store = os.path.expanduser("~/ROUNDS-modfix/port-tests/ingame")
+    store = os.path.join(HERE, "..", "tests", "ingame")
     have = {}
     for root, _, files in os.walk(store):
         for f in files:

@@ -1,0 +1,916 @@
+diff -ruN -x bin -x obj src/ModdingUtils/AIMinion/AIMinionHandler.cs build/AIMinion/AIMinionHandler.cs
+--- src/ModdingUtils/AIMinion/AIMinionHandler.cs	2026-09-30 23:41:50
++++ build/AIMinion/AIMinionHandler.cs	2026-09-30 23:46:30
+@@ -72,7 +72,7 @@
+ 
+         public static Player GetPlayerOrAIWithID(Player[] players, int ID)
+         {
+-            return players.Where(player => player.playerID == ID).First();
++            return players.Where(player => player.PlayerID == ID).First();
+         }
+         private static IEnumerator AddAIsToPlayerManager()
+         {
+@@ -397,7 +397,7 @@
+                 this.gameObject.transform.parent.gameObject.SetActive(true);
+                 this.player.data.isPlaying = true;
+                 this.player.data.gameObject.transform.position = Pos;
+-                NetworkingManager.RPC(typeof(EnableDisablePlayer), nameof(RPCA_Teleport), new object[] { Pos, this.player.data.view.ControllerActorNr, this.player.playerID });
++                NetworkingManager.RPC(typeof(EnableDisablePlayer), nameof(RPCA_Teleport), new object[] { Pos, this.player.data.view.ControllerActorNr, this.player.PlayerID });
+                 Traverse.Create(this.player.data.playerVel).Field("simulated").SetValue(true);
+             }
+             internal void ReviveAndSpawn(Vector3? pos = null, bool isFullRevive = true)
+@@ -411,7 +411,7 @@
+ 
+                 this.player.GetComponent<GeneralInput>().enabled = true;
+                 this.player.data.gameObject.transform.position = Pos;
+-                NetworkingManager.RPC(typeof(EnableDisablePlayer), nameof(RPCA_Teleport), new object[] { Pos, this.player.data.view.ControllerActorNr, this.player.playerID });
++                NetworkingManager.RPC(typeof(EnableDisablePlayer), nameof(RPCA_Teleport), new object[] { Pos, this.player.data.view.ControllerActorNr, this.player.PlayerID });
+                 SoundManager.Instance.Play(PlayerManager.instance.soundCharacterSpawn[0], this.player.transform);
+                 this.player.data.healthHandler.Revive(isFullRevive);
+             }
+@@ -661,7 +661,7 @@
+             // set maxHealth
+             if (maxHealth != null)
+             {
+-                AIdata.maxHealth = (float)maxHealth;
++                AIdata.MaxHealth = (float)maxHealth;
+             }
+ 
+ 
+@@ -674,7 +674,7 @@
+                 // if another player created this AI, then make sure it's AI controller is removed and remove this player from PlayerManager
+                 UnityEngine.GameObject.Destroy(aicontroller);
+                 List<Player> playersToRemove = new List<Player>() { };
+-                foreach (Player playerToRemove in PlayerManager.instance.players.Where(player => player.playerID == newID && player.data.view.ControllerActorNr == spawnerActorID))
++                foreach (Player playerToRemove in PlayerManager.instance.players.Where(player => player.PlayerID == newID && player.data.view.ControllerActorNr == spawnerActorID))
+                 {
+                     playersToRemove.Add(playerToRemove);
+                 }
+@@ -1078,10 +1078,10 @@
+         {
+             yield return new WaitUntil(() =>
+             {
+-                return ((PlayerAPI)__instance.GetFieldValue("m_PlayerAPI")).player.playerID != -1;
++                return ((PlayerAPI)__instance.GetFieldValue("m_PlayerAPI")).player.PlayerID != -1;
+             });
+ 
+-            NetworkingManager.RPC(typeof(PlayerAIPhilipPatchStart), nameof(RPCA_SetAutoBlock), new object[] { ((PlayerAPI)__instance.GetFieldValue("m_PlayerAPI")).player.playerID, ((PlayerAPI)__instance.GetFieldValue("m_PlayerAPI")).player.data.view.ControllerActorNr});
++            NetworkingManager.RPC(typeof(PlayerAIPhilipPatchStart), nameof(RPCA_SetAutoBlock), new object[] { ((PlayerAPI)__instance.GetFieldValue("m_PlayerAPI")).player.PlayerID, ((PlayerAPI)__instance.GetFieldValue("m_PlayerAPI")).player.data.view.ControllerActorNr});
+ 
+             yield break;
+         }
+diff -ruN -x bin -x obj src/ModdingUtils/AIMinion/Patches/Gun.cs build/AIMinion/Patches/Gun.cs
+--- src/ModdingUtils/AIMinion/Patches/Gun.cs	2026-09-30 23:41:50
++++ build/AIMinion/Patches/Gun.cs	2026-09-30 23:47:22
+@@ -124,7 +124,8 @@
+             var dataPlayer = AccessTools.Field(typeof(CharacterData), nameof(CharacterData.player));
+             var dataView = AccessTools.Field(typeof(CharacterData), nameof(CharacterData.view));
+ 
+-            var playerID = AccessTools.Field(typeof(Player), nameof(Player.playerID));
++            // Player.playerID field became private m_playerID behind the read-only PlayerID property
++            var playerID = AccessTools.PropertyGetter(typeof(Player), nameof(Player.PlayerID));
+ 
+             // The RPCs to change it for
+             string[] rpcs = new string[] { "RPCA_Init", "RPCA_Init_noAmmoUse", "RPCA_Init_SeparateGun" };
+@@ -145,7 +146,7 @@
+                     }
+ 
+                     codes[i] = new CodeInstruction(OpCodes.Ldfld, dataPlayer);
+-                    codes[i + 1] = new CodeInstruction(OpCodes.Ldfld, playerID);
++                    codes[i + 1] = new CodeInstruction(OpCodes.Callvirt, playerID);
+ 
+                 }
+             }
+diff -ruN -x bin -x obj src/ModdingUtils/AIMinion/Patches/HealthHandler.cs build/AIMinion/Patches/HealthHandler.cs
+--- src/ModdingUtils/AIMinion/Patches/HealthHandler.cs	2026-09-30 23:41:50
++++ build/AIMinion/Patches/HealthHandler.cs	2026-09-30 23:46:30
+@@ -56,7 +56,7 @@
+             ((CharacterStatModifiers)__instance.GetFieldValue("stats")).WasDealtDamage(damage, damagingPlayer != null && damagingPlayer.transform.root == __instance.transform);
+             if (!lethal)
+             {
+-                data.health = Mathf.Clamp(data.health, 1f, data.maxHealth);
++                data.health = Mathf.Clamp(data.health, 1f, data.MaxHealth);
+             }
+             if (data.health < 0f && !data.dead)
+             {
+diff -ruN -x bin -x obj src/ModdingUtils/AIMinion/Patches/Player.cs build/AIMinion/Patches/Player.cs
+--- src/ModdingUtils/AIMinion/Patches/Player.cs	2026-09-30 23:41:50
++++ build/AIMinion/Patches/Player.cs	2026-09-30 23:47:22
+@@ -1,4 +1,4 @@
+-﻿using System;
++using System;
+ using System.Collections.Generic;
+ using System.Text;
+ using HarmonyLib;
+@@ -16,7 +16,7 @@
+         private static bool Prefix(Player __instance)
+         {
+ 
+-            if (__instance.playerID >= CharacterCreatorHandler.instance.selectedPlayerFaces.Length || __instance.playerID < 0)
++            if (__instance.PlayerID >= CharacterCreatorHandler.instance.selectedPlayerFaces.Length || __instance.PlayerID < 0)
+             {
+                 return false;
+             }
+@@ -71,9 +71,9 @@
+     [HarmonyPatch(typeof(Player), "AssignPlayerID")]
+     class PlayerPatchAssignPlayerID
+     {
+-        private static bool Prefix(Player __instance, int ID)
++        private static bool Prefix(Player __instance, int ID, ref int ___m_playerID)
+         {
+-            __instance.playerID = ID;
++            ___m_playerID = ID; // was __instance.playerID = ID (field is now private m_playerID)
+             __instance.SetColors();
+             return AIMinionHandler.playersCanJoin || AIMinionHandler.sandbox;
+         }
+@@ -84,9 +84,9 @@
+     [HarmonyPatch(typeof(Player), "AssignTeamID")]
+     class PlayerPatchAssignTeamID
+     {
+-        private static bool Prefix(Player __instance, int ID)
++        private static bool Prefix(Player __instance, int ID, ref int ___m_teamID)
+         {
+-            __instance.teamID = ID;
++            ___m_teamID = ID; // was __instance.teamID = ID (field is now private m_teamID; AssignTeamID must not be called from its own prefix)
+             return AIMinionHandler.playersCanJoin || AIMinionHandler.sandbox;
+         }
+     }
+diff -ruN -x bin -x obj src/ModdingUtils/AIMinion/Patches/PlayerManager.cs build/AIMinion/Patches/PlayerManager.cs
+--- src/ModdingUtils/AIMinion/Patches/PlayerManager.cs	2026-09-30 23:41:50
++++ build/AIMinion/Patches/PlayerManager.cs	2026-09-30 23:46:30
+@@ -20,7 +20,7 @@
+     {
+         private static bool Prefix(PlayerManager __instance, Player asker, ref Player __result)
+         {
+-            __result = __instance.GetClosestPlayerInOtherTeam(asker.transform.position, asker.teamID, false);
++            __result = __instance.GetClosestPlayerInOtherTeam(asker.transform.position, asker.TeamID, false);
+             return false;
+         }
+     }
+@@ -60,7 +60,7 @@
+             float num = float.MaxValue;
+ 
+             var alivePlayersInOtherTeam = instance.players
+-                .Where(p => p.teamID != team)
++                .Where(p => p.TeamID != team)
+                 .Where(p => !p.data.dead)
+                 .ToList();
+ 
+@@ -86,7 +86,7 @@
+     {
+         private static bool Prefix(PlayerManager __instance, Player player)
+         {
+-            int num = PlayerManager.instance.players.Where(p => !p.data.dead).Select(p => p.teamID).Distinct().Count();
++            int num = PlayerManager.instance.players.Where(p => !p.data.dead).Select(p => p.TeamID).Distinct().Count();
+ 
+             if ((Action<Player,int>)__instance.GetFieldValue("PlayerDiedAction") != null)
+             {
+diff -ruN -x bin -x obj src/ModdingUtils/Extensions/CharacterData.cs build/Extensions/CharacterData.cs
+--- src/ModdingUtils/Extensions/CharacterData.cs	2026-09-30 23:41:50
++++ build/Extensions/CharacterData.cs	2026-09-30 23:46:30
+@@ -45,7 +45,7 @@
+                 OutOfBoundsHandler[] ooBs = UnityEngine.GameObject.FindObjectsOfType<OutOfBoundsHandler>();
+                 foreach (OutOfBoundsHandler ooB in ooBs)
+                 {
+-                    if (((CharacterData)Traverse.Create(ooB).Field("data").GetValue()).player.playerID == ((CharacterData)Traverse.Create(__instance).Field("data").GetValue()).player.playerID)
++                    if (((CharacterData)Traverse.Create(ooB).Field("data").GetValue()).player.PlayerID == ((CharacterData)Traverse.Create(__instance).Field("data").GetValue()).player.PlayerID)
+                     {
+                         ((CharacterData)Traverse.Create(__instance).Field("data").GetValue()).GetAdditionalData().outOfBoundsHandler = ooB;
+                         return;
+diff -ruN -x bin -x obj src/ModdingUtils/Extensions/PlayerStatus.cs build/Extensions/PlayerStatus.cs
+--- src/ModdingUtils/Extensions/PlayerStatus.cs	2026-09-30 23:41:50
++++ build/Extensions/PlayerStatus.cs	2026-09-30 23:46:30
+@@ -28,7 +28,7 @@
+             int num = 0;
+             foreach (Player other_player in PlayerManager.instance.players)
+             {
+-                if (other_player.teamID != player.teamID)
++                if (other_player.TeamID != player.TeamID)
+                 {
+                     num++;
+                 }
+@@ -41,7 +41,7 @@
+             List<Player> res = new List<Player>() { };
+             foreach (Player other_player in PlayerManager.instance.players)
+             {
+-                if (other_player.teamID != player.teamID)
++                if (other_player.TeamID != player.TeamID)
+                 {
+                     res.Add(other_player);
+                 }
+@@ -61,7 +61,7 @@
+             List<Player> res = new List<Player>() { };
+             foreach (Player other_player in PlayerManager.instance.players)
+             {
+-                if (other_player.playerID != player.playerID)
++                if (other_player.PlayerID != player.PlayerID)
+                 {
+                     res.Add(other_player);
+                 }
+diff -ruN -x bin -x obj src/ModdingUtils/Extensions/TemporaryModifiers.cs build/Extensions/TemporaryModifiers.cs
+--- src/ModdingUtils/Extensions/TemporaryModifiers.cs	2026-09-30 23:41:50
++++ build/Extensions/TemporaryModifiers.cs	2026-09-30 23:46:30
+@@ -62,12 +62,12 @@
+         }
+         public void ApplyCharacterDataModifier(CharacterData data)
+         {
+-            maxHealth_delta = data.maxHealth * maxHealth_mult + maxHealth_add - data.maxHealth;
++            maxHealth_delta = data.MaxHealth * maxHealth_mult + maxHealth_add - data.MaxHealth;
+             numberOfJumps_delta = data.jumps * numberOfJumps_mult + numberOfJumps_add - data.jumps;
+ 
+-            float hpRatio = data.health / data.maxHealth;
+-            data.maxHealth += maxHealth_delta;
+-            data.health = data.maxHealth * hpRatio;
++            float hpRatio = data.health / data.MaxHealth;
++            data.MaxHealth += maxHealth_delta;
++            data.health = data.MaxHealth * hpRatio;
+             data.jumps += numberOfJumps_delta;
+ 
+             // update player stuff
+@@ -85,14 +85,14 @@
+         }
+         public void RemoveCharacterDataModifier(CharacterData data, bool clear = true)
+         {
+-            float hpRatio = data.health / data.maxHealth;
+-            data.maxHealth -= maxHealth_delta;
+-            data.health = data.maxHealth * hpRatio;
++            float hpRatio = data.health / data.MaxHealth;
++            data.MaxHealth -= maxHealth_delta;
++            data.health = data.MaxHealth * hpRatio;
+             data.jumps -= numberOfJumps_delta;
+ 
+-            if (data.maxHealth < 1f)
++            if (data.MaxHealth < 1f)
+             {
+-                data.maxHealth = 1f;
++                data.MaxHealth = 1f;
+             }
+ 
+             // update player stuff
+diff -ruN -x bin -x obj src/ModdingUtils/ModdingUtils.csproj build/ModdingUtils.csproj
+--- src/ModdingUtils/ModdingUtils.csproj	2026-09-30 23:41:50
++++ build/ModdingUtils.csproj	2026-09-30 23:46:58
+@@ -1,79 +1,50 @@
+-﻿<Project Sdk="Microsoft.NET.Sdk">
+-
++<Project Sdk="Microsoft.NET.Sdk">
+   <PropertyGroup>
+     <TargetFramework>netstandard2.1</TargetFramework>
++    <AssemblyName>ModdingUtils</AssemblyName>
++    <RootNamespace>ModdingUtils</RootNamespace>
++    <Version>1.0.0.0</Version>
++    <AssemblyVersion>1.0.0.0</AssemblyVersion>
++    <FileVersion>1.0.0.0</FileVersion>
++    <GenerateDocumentationFile>false</GenerateDocumentationFile>
++    <DebugType>portable</DebugType>
++    <Deterministic>true</Deterministic>
++    <LangVersion>latest</LangVersion>
++    <NoWarn>$(NoWarn);CS0618;CS0612;CS0436;CS0168;CS0219;CS0414;CS0649;CS0169;CS0108;CS0114</NoWarn>
++    <RoundsFolder>$(HOME)/Library/Application Support/Steam/steamapps/common/ROUNDS</RoundsFolder>
++    <Managed>$(RoundsFolder)/ROUNDS.app/Contents/Resources/Data/Managed</Managed>
++    <Core>$(RoundsFolder)/BepInEx/core</Core>
++    <Staging>$(MSBuildProjectDirectory)/../../staging</Staging>
+   </PropertyGroup>
+-
++  <ItemDefinitionGroup>
++    <Reference><Private>false</Private></Reference>
++  </ItemDefinitionGroup>
+   <ItemGroup>
+-    <PackageReference Include="UnboundLib" Version="3.1.4" />
++    <Reference Include="$(Core)/0Harmony.dll" />
++    <Reference Include="$(Core)/BepInEx.dll" />
++    <Reference Include="$(Core)/BepInEx.Harmony.dll" />
++    <Reference Include="$(Staging)/UnboundLib/UnboundLib.dll" />
++    <Reference Include="$(Staging)/UnboundLib/MMHOOK_Assembly-CSharp.dll" />
++    <Reference Include="$(Managed)/Assembly-CSharp.dll" />
++    <Reference Include="$(Managed)/Assembly-CSharp-firstpass.dll" />
++    <Reference Include="$(Managed)/InControl.dll" />
++    <Reference Include="$(Managed)/Photon3Unity3D.dll" />
++    <Reference Include="$(Managed)/PhotonRealtime.dll" />
++    <Reference Include="$(Managed)/PhotonUnityNetworking.dll" />
++    <Reference Include="$(Managed)/SonigonAudioEngine.Runtime.dll" />
++    <Reference Include="$(Managed)/Unity.TextMeshPro.dll" />
++    <Reference Include="$(Managed)/Unity.Localization.dll" />
++    <Reference Include="$(Managed)/UnityEngine.dll" />
++    <Reference Include="$(Managed)/UnityEngine.AudioModule.dll" />
++    <Reference Include="$(Managed)/UnityEngine.CoreModule.dll" />
++    <Reference Include="$(Managed)/UnityEngine.ParticleSystemModule.dll" />
++    <Reference Include="$(Managed)/UnityEngine.Physics2DModule.dll" />
++    <Reference Include="$(Managed)/UnityEngine.PhysicsModule.dll" />
++    <Reference Include="$(Managed)/UnityEngine.SpriteMaskModule.dll" />
++    <Reference Include="$(Managed)/UnityEngine.TextRenderingModule.dll" />
++    <Reference Include="$(Managed)/UnityEngine.IMGUIModule.dll" />
++    <Reference Include="$(Managed)/UnityEngine.UI.dll" />
++    <Reference Include="$(Managed)/UnityEngine.UIModule.dll" />
++    <Reference Include="$(Managed)/UnityEngine.UIElementsModule.dll" />
+   </ItemGroup>
+-
+-  <PropertyGroup>
+-    <RoundsFolder>E:\Program Files (x86)\Steam\steamapps\common\ROUNDS</RoundsFolder>
+-  </PropertyGroup>
+-	
+-  <ItemGroup>
+-    <Reference Include="0Harmony">
+-      <HintPath>$(RoundsFolder)\BepInEx\core\0Harmony.dll</HintPath>
+-    </Reference>
+-    <Reference Include="Assembly-CSharp, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\Assembly-CSharp.dll</HintPath>
+-    </Reference>
+-    <Reference Include="BepInEx">
+-      <HintPath>$(RoundsFolder)\BepInEx\core\BepInEx.dll</HintPath>
+-    </Reference>
+-    <Reference Include="BepInEx.Harmony">
+-		<HintPath>$(RoundsFolder)\BepInEx\core\BepInEx.Harmony.dll</HintPath>
+-    </Reference>
+-    <Reference Include="InControl">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\InControl.dll</HintPath>
+-    </Reference>
+-    <Reference Include="MMHOOK_Assembly-CSharp">
+-      <HintPath>$(RoundsFolder)\BepInEx\plugins\MMHOOK_Assembly-CSharp.dll</HintPath>
+-    </Reference>
+-    <Reference Include="Photon3Unity3D">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\Photon3Unity3D.dll</HintPath>
+-    </Reference>
+-    <Reference Include="PhotonRealtime">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\PhotonRealtime.dll</HintPath>
+-    </Reference>
+-    <Reference Include="PhotonUnityNetworking">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\PhotonUnityNetworking.dll</HintPath>
+-    </Reference>
+-    <Reference Include="SonigonAudioEngine.Runtime">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\SonigonAudioEngine.Runtime.dll</HintPath>
+-    </Reference>
+-    <Reference Include="Unity.TextMeshPro">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+-    </Reference>
+-    <Reference Include="UnityEngine">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\UnityEngine.dll</HintPath>
+-    </Reference>
+-    <Reference Include="UnityEngine.AudioModule">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\UnityEngine.AudioModule.dll</HintPath>
+-    </Reference>
+-    <Reference Include="UnityEngine.CoreModule">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\UnityEngine.CoreModule.dll</HintPath>
+-    </Reference>
+-    <Reference Include="UnityEngine.ParticleSystemModule">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
+-    </Reference>
+-    <Reference Include="UnityEngine.Physics2DModule">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\UnityEngine.Physics2DModule.dll</HintPath>
+-    </Reference>
+-    <Reference Include="UnityEngine.SpriteMaskModule">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\UnityEngine.SpriteMaskModule.dll</HintPath>
+-    </Reference>
+-    
+-    <Reference Include="UnityEngine.UI">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\UnityEngine.UI.dll</HintPath>
+-    </Reference>
+-    <Reference Include="UnityEngine.UIElementsModule">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\UnityEngine.UIElementsModule.dll</HintPath>
+-    </Reference>
+-    <Reference Include="UnityEngine.UIModule">
+-      <HintPath>$(RoundsFolder)\Rounds_Data\Managed\UnityEngine.UIModule.dll</HintPath>
+-    </Reference>
+-  </ItemGroup>
+-
+ </Project>
+diff -ruN -x bin -x obj src/ModdingUtils/MonoBehaviours/HealthBasedEffect.cs build/MonoBehaviours/HealthBasedEffect.cs
+--- src/ModdingUtils/MonoBehaviours/HealthBasedEffect.cs	2026-09-30 23:41:50
++++ build/MonoBehaviours/HealthBasedEffect.cs	2026-09-30 23:46:30
+@@ -47,7 +47,7 @@
+         }
+         private bool HealthInRange()
+         {
+-            return (data.health <= data.maxHealth * percThreshMax && data.health >= data.maxHealth * percThreshMin);
++            return (data.health <= data.MaxHealth * percThreshMax && data.health >= data.MaxHealth * percThreshMin);
+         }
+         public override void OnOnDisable()
+         {
+diff -ruN -x bin -x obj src/ModdingUtils/MonoBehaviours/InConeEffect.cs build/MonoBehaviours/InConeEffect.cs
+--- src/ModdingUtils/MonoBehaviours/InConeEffect.cs	2026-09-30 23:41:50
++++ build/MonoBehaviours/InConeEffect.cs	2026-09-30 23:46:30
+@@ -144,11 +144,11 @@
+         }
+         public List<Player> GetAllEnemyPlayers()
+         {
+-            return PlayerManager.instance.players.Where(player => player.teamID != this.player.teamID).ToList();
++            return PlayerManager.instance.players.Where(player => player.TeamID != this.player.TeamID).ToList();
+         }
+         public List<Player> GetAllOtherPlayers()
+         {
+-            return PlayerManager.instance.players.Where(player => player.playerID != this.player.playerID).ToList();
++            return PlayerManager.instance.players.Where(player => player.PlayerID != this.player.PlayerID).ToList();
+         }
+         public bool OtherPlayerInCone(Player otherPlayer)
+         {
+diff -ruN -x bin -x obj src/ModdingUtils/Patches/CardChoiceGetRandomCardPatch.cs build/Patches/CardChoiceGetRandomCardPatch.cs
+--- src/ModdingUtils/Patches/CardChoiceGetRandomCardPatch.cs	2026-09-30 23:41:50
++++ build/Patches/CardChoiceGetRandomCardPatch.cs	2026-09-30 23:47:33
+@@ -1,4 +1,4 @@
+-﻿using BepInEx;
++using BepInEx;
+ using HarmonyLib;
+ using System;
+ using System.Collections.Generic;
+@@ -10,7 +10,7 @@
+ namespace ModdingUtils.Patches
+ {
+     [Serializable]
+-    [HarmonyPatch(typeof(CardChoice), "GetRanomCard")]
++    [HarmonyPatch(typeof(CardChoice), "GetRandomCard")] // renamed from GetRanomCard in the 2025 update
+     public class CardChoicePatchGetRanomCard
+     {
+         internal static bool CardChoiceSpawnUniqueCardPatch = false;
+@@ -40,11 +40,11 @@
+             {
+                 if ((bool)CardChoiceVisuals.instance.GetFieldValue("isShowinig"))
+                 {
+-                    List<string> spawnedCards = ((List<GameObject>)CardChoice.instance.GetFieldValue("spawnedCards")).Select(obj => obj.GetComponent<CardInfo>().cardName).ToList();
++                    List<string> spawnedCards = ((List<GameObject>)CardChoice.instance.GetFieldValue("spawnedCards")).Select(obj => global::ModdingUtils.Utils.CompatShims.GetCardName(obj.GetComponent<CardInfo>())).ToList();
+                     if(CardChoiceSpawnUniqueCardPatch)
+-                        validCards = allowedCards.Where(c => c.categories.Contains(UniqueCardPatch.GetType("CustomCardCategories").GetFieldValue("CanDrawMultipleCategory")) || !spawnedCards.Contains(c.cardName)).ToArray();
++                        validCards = allowedCards.Where(c => c.categories.Contains(UniqueCardPatch.GetType("CustomCardCategories").GetFieldValue("CanDrawMultipleCategory")) || !spawnedCards.Contains(global::ModdingUtils.Utils.CompatShims.GetCardName(c))).ToArray();
+                     else
+-                        validCards = allowedCards.Where(c => !spawnedCards.Contains(c.cardName)).ToArray();
++                        validCards = allowedCards.Where(c => !spawnedCards.Contains(global::ModdingUtils.Utils.CompatShims.GetCardName(c))).ToArray();
+                 }
+             }
+                 catch (NullReferenceException)
+@@ -56,7 +56,7 @@
+                 if (CardChoiceSpawnUniqueCardPatch)
+                     return ((CardInfo)UniqueCardPatch.GetType("CardChoiceSpawnUniqueCardPatch").GetField("NullCard", BindingFlags.NonPublic | BindingFlags.Static).GetValue(null)).gameObject;
+                 else
+-                    return CardChoice.instance.cards.FirstOrDefault(c => c.cardName.ToLower() == "huge").gameObject;//return huge so that the game doesn't crash
++                    return CardChoice.instance.cards.FirstOrDefault(c => global::ModdingUtils.Utils.CompatShims.GetCardName(c).ToLower() == "huge").gameObject;//return huge so that the game doesn't crash
+             }
+             return OrignialGetRanomCard(validCards);
+         }
+diff -ruN -x bin -x obj src/ModdingUtils/Utils/CardBar.cs build/Utils/CardBar.cs
+--- src/ModdingUtils/Utils/CardBar.cs	2026-09-30 23:41:50
++++ build/Utils/CardBar.cs	2026-09-30 23:47:33
+@@ -1,4 +1,4 @@
+-﻿using System;
++using System;
+ using System.Collections.Generic;
+ using System.Text;
+ using System.Linq;
+@@ -41,7 +41,7 @@
+         }
+         public CardBar PlayersCardBar(Player player)
+         {
+-            return CardBars[player.playerID];
++            return CardBars[player.PlayerID];
+         }
+ 
+         private CardBarUtils()
+@@ -72,7 +72,7 @@
+ 
+         public void ShowCard(Player player, CardInfo card)
+         {
+-            ShowCard(player.playerID, card.name);
++            ShowCard(player.PlayerID, card.name);
+         }
+         public void ShowCard(int playerID, CardInfo card)
+         {
+@@ -80,7 +80,7 @@
+         }
+         public void ShowCard(Player player, int cardID)
+         {
+-            ShowCard(player.playerID, Cards.instance.GetCardWithID(cardID).name);
++            ShowCard(player.PlayerID, Cards.instance.GetCardWithID(cardID).name);
+         }
+         public void ShowCard(int playerID, int cardID)
+         {
+@@ -107,14 +107,14 @@
+             {
+                 return;
+             }
+-            instance.PlayersCardBar(playerID).OnHover(Cards.instance.GetCardWithID(cardID), Vector3.zero);
+-            ((GameObject)Traverse.Create(instance.PlayersCardBar(playerID)).Field("currentCard").GetValue()).gameObject.transform.localScale = Vector3.one * cardLocalScaleMult;
++            GameObject shown = CompatShims.ShowCardOnBar(instance.PlayersCardBar(playerID), Cards.instance.GetCardWithID(cardID));
++            shown.gameObject.transform.localScale = Vector3.one * cardLocalScaleMult;
+ 
+         }
+ 
+         public void HideCard(Player player)
+         {
+-            HideCard(player.playerID);
++            HideCard(player.PlayerID);
+         }
+         public void HideCard(int playerID)
+         {
+@@ -167,7 +167,7 @@
+         }
+         public GameObject GetCardBarSquare(Player player, int idx)
+         {
+-            return GetCardBarSquare(player.playerID, idx);
++            return GetCardBarSquare(player.PlayerID, idx);
+         }
+ 
+         public GameObject[] GetCardBarSquares(int playerID)
+@@ -184,7 +184,7 @@
+ 
+         public GameObject[] GetCardBarSquares(Player player)
+         {
+-            return GetCardBarSquares(player.playerID);
++            return GetCardBarSquares(player.PlayerID);
+         }
+         public void ResetPlayersLineColor(int playerID)
+         {
+@@ -204,7 +204,7 @@
+         }
+         public void ResetPlayersLineColor(Player player)
+         {
+-            ResetPlayersLineColor(player.playerID);
++            ResetPlayersLineColor(player.PlayerID);
+         }
+         public void ChangePlayersLineColor(int playerID, Color color)
+         {
+@@ -217,7 +217,7 @@
+         }
+         public void ChangePlayersLineColor(Player player, Color color)
+         {
+-            ChangePlayersLineColor(player.playerID, color);
++            ChangePlayersLineColor(player.PlayerID, color);
+         }
+ 
+         public Color GetPlayersBarColor(int playerID)
+@@ -228,7 +228,7 @@
+         }
+         public Color GetPlayersBarColor(Player player)
+         {
+-            return GetPlayersBarColor(player.playerID);
++            return GetPlayersBarColor(player.PlayerID);
+         }
+ 
+         public Color ChangePlayersBarColor(int playerID, Color color)
+@@ -247,7 +247,7 @@
+ 
+         public Color ChangePlayersBarColor(Player player, Color color)
+         {
+-            return ChangePlayersBarColor(player.playerID, color);
++            return ChangePlayersBarColor(player.PlayerID, color);
+         }
+ 
+         public Color GetCardSquareColor(GameObject cardSquare)
+@@ -269,11 +269,7 @@
+ 
+         public static void SilentAddToCardBar(int playerID, CardInfo card, string twoLetterCode = "")
+         {
+-            Traverse.Create(instance.PlayersCardBar(playerID)).Field("ci").SetValue(card);
+-            GameObject source = (GameObject)Traverse.Create(instance.PlayersCardBar(playerID)).Field("source").GetValue();
+-            GameObject gameObject = UnityEngine.Object.Instantiate<GameObject>(source, source.transform.position, source.transform.rotation, source.transform.parent);
+-            gameObject.transform.localScale = Vector3.one;
+-            string text = card.cardName;
++            string text = global::ModdingUtils.Utils.CompatShims.GetCardName(card);
+             if (twoLetterCode != "") { text = twoLetterCode; }
+             while (text.Length < 2)
+             {
+@@ -290,13 +286,11 @@
+             {
+                 text = text2;
+             }
+-            gameObject.GetComponentInChildren<TextMeshProUGUI>().text = text;
+-            Traverse.Create(gameObject.GetComponent<CardBarButton>()).Field("card").SetValue(card);
+-            gameObject.gameObject.SetActive(true);
++            CompatShims.AddButtonToCardBar(instance.PlayersCardBar(playerID), card, text);
+         }
+         public static void SilentAddToCardBar(Player player, CardInfo card, string twoLetterCode = "")
+         {
+-            SilentAddToCardBar(player.playerID, card, twoLetterCode);
++            SilentAddToCardBar(player.PlayerID, card, twoLetterCode);
+         }
+ 
+         internal System.Collections.IEnumerator EndPickPhaseShow()
+@@ -315,7 +309,7 @@
+ 
+                 if (cardsToShow[player].Count > 0)
+                 {
+-                    orig = HighlightCardBar(player.playerID);
++                    orig = HighlightCardBar(player.PlayerID);
+                 }
+                 foreach (CardInfo card in cardsToShow[player].Where(card => player.data.currentCards.Select(card => card.name).Contains(card.name)))
+                 {
+@@ -326,7 +320,7 @@
+                 }
+                 if (cardsToShow[player].Count > 0)
+                 {
+-                    UnhighlightCardBar(player.playerID, orig);
++                    UnhighlightCardBar(player.PlayerID, orig);
+                 }
+             }
+             Reset();
+@@ -352,11 +346,11 @@
+ 
+         public System.Collections.IEnumerator ShowImmediate(Player player, int cardID, float? duration = null)
+         {
+-            return ShowImmediate(player.playerID, cardID, duration);
++            return ShowImmediate(player.PlayerID, cardID, duration);
+         }
+         public System.Collections.IEnumerator ShowImmediate(Player player, CardInfo card, float? duration = null)
+         {
+-            return ShowImmediate(player.playerID, Cards.instance.GetCardID(card), duration);
++            return ShowImmediate(player.PlayerID, Cards.instance.GetCardID(card), duration);
+         }
+         public System.Collections.IEnumerator ShowImmediate(int playerID, CardInfo card, float? duration = null)
+         {
+@@ -364,7 +358,7 @@
+         }
+         public System.Collections.IEnumerator ShowImmediate(Player player, int[] cardIDs, float? duration = null)
+         {
+-            return ShowImmediate(player.playerID, cardIDs, duration);
++            return ShowImmediate(player.PlayerID, cardIDs, duration);
+         }
+         public System.Collections.IEnumerator ShowImmediate(int playerID, CardInfo[] cards, float? duration = null)
+         {
+@@ -384,7 +378,7 @@
+                 cardIDs.Add(Cards.instance.GetCardID(card));
+             }
+ 
+-            return ShowImmediate(player.playerID, cardIDs.ToArray(), duration);
++            return ShowImmediate(player.PlayerID, cardIDs.ToArray(), duration);
+         }
+         public System.Collections.IEnumerator ShowImmediate(Player player, int cardID)
+         {
+@@ -437,7 +431,7 @@
+             }
+             else if (PhotonNetwork.IsMasterClient)
+             {
+-                NetworkingManager.RPC(typeof(CardBarUtils), nameof(RPCA_ClearCardBar), new object[] { player.playerID });
++                NetworkingManager.RPC(typeof(CardBarUtils), nameof(RPCA_ClearCardBar), new object[] { player.PlayerID });
+             }
+         }
+ 
+@@ -445,7 +439,7 @@
+         private static void RPCA_ClearCardBar(int playerID)
+         {
+             Player playerToReset = (Player)PlayerManager.instance.InvokeMethod("GetPlayerWithID", playerID);
+-            instance.PlayersCardBar(playerToReset.playerID).ClearBar();
++            instance.PlayersCardBar(playerToReset.PlayerID).ClearBar();
+         }
+     }
+     public class DictionaryOfLists<TKey, TListValue> : Dictionary<TKey, List<TListValue>>
+diff -ruN -x bin -x obj src/ModdingUtils/Utils/Cards.cs build/Utils/Cards.cs
+--- src/ModdingUtils/Utils/Cards.cs	2026-09-30 23:41:50
++++ build/Utils/Cards.cs	2026-09-30 23:47:33
+@@ -1,4 +1,4 @@
+-﻿using System;
++using System;
+ using System.Collections.Generic;
+ using System.Collections.ObjectModel;
+ using System.Text;
+@@ -110,7 +110,7 @@
+                     { }
+                     catch (Exception exception)
+                     {
+-                        UnityEngine.Debug.LogError("[ModdingUtils] EXCEPTION: " + exception.GetType().ToString() + "\nThrown by: " + card.GetComponent<CustomCard>().GetModName() + " - " + card.cardName + " - " + "OnReassignCard(Player, Gun, GunAmmo, HealthHandler, Gravity, Block, CharacterStatModifiers)");
++                        UnityEngine.Debug.LogError("[ModdingUtils] EXCEPTION: " + exception.GetType().ToString() + "\nThrown by: " + card.GetComponent<CustomCard>().GetModName() + " - " + global::ModdingUtils.Utils.CompatShims.GetCardName(card) + " - " + "OnReassignCard(Player, Gun, GunAmmo, HealthHandler, Gravity, Block, CharacterStatModifiers)");
+                     }
+                 }
+ 
+@@ -126,7 +126,7 @@
+                 }
+                 if (addToCardBar)
+                 {
+-                    SilentAddToCardBar(player.playerID, cardStats.GetComponent<CardInfo>().sourceCard, twoLetterCode, forceDisplay, forceDisplayDelay);
++                    SilentAddToCardBar(player.PlayerID, cardStats.GetComponent<CardInfo>().sourceCard, twoLetterCode, forceDisplay, forceDisplayDelay);
+                 }
+             }
+             else if (PhotonNetwork.IsMasterClient)
+@@ -135,11 +135,11 @@
+ 
+                 if (addToCardBar)
+                 {
+-                    NetworkingManager.RPC(typeof(Cards), nameof(RPCA_AssignCard), new object[] { card.name, player.playerID, reassign, twoLetterCode, forceDisplay, forceDisplayDelay });
++                    NetworkingManager.RPC(typeof(Cards), nameof(RPCA_AssignCard), new object[] { card.name, player.PlayerID, reassign, twoLetterCode, forceDisplay, forceDisplayDelay });
+                 }
+                 else
+                 {
+-                    NetworkingManager.RPC(typeof(Cards), nameof(RPCA_AssignCardWithoutCardBar), new object[] { card.name, player.playerID, reassign, twoLetterCode, forceDisplay, forceDisplayDelay });
++                    NetworkingManager.RPC(typeof(Cards), nameof(RPCA_AssignCardWithoutCardBar), new object[] { card.name, player.PlayerID, reassign, twoLetterCode, forceDisplay, forceDisplayDelay });
+                 }
+ 
+             }
+@@ -488,7 +488,7 @@
+             }
+             else if (PhotonNetwork.IsMasterClient)
+             {
+-                NetworkingManager.RPC(typeof(Cards), "RPCA_FullReset", new object[] { player.playerID });
++                NetworkingManager.RPC(typeof(Cards), "RPCA_FullReset", new object[] { player.PlayerID });
+                 if (clearBar)
+                 {
+                     CardBarUtils.instance.ClearCardBar(player);
+@@ -777,7 +777,7 @@
+                 { }
+                 catch (Exception exception)
+                 {
+-                    UnityEngine.Debug.LogError("[ModdingUtils] EXCEPTION: " + exception.GetType().ToString() + "\nThrown by: " + card.GetComponent<CustomCard>().GetModName() + " - " + card.cardName + " - " + "OnReassignCard(Player, Gun, GunAmmo, HealthHandler, Gravity, Block, CharacterStatModifiers)");
++                    UnityEngine.Debug.LogError("[ModdingUtils] EXCEPTION: " + exception.GetType().ToString() + "\nThrown by: " + card.GetComponent<CustomCard>().GetModName() + " - " + global::ModdingUtils.Utils.CompatShims.GetCardName(card) + " - " + "OnReassignCard(Player, Gun, GunAmmo, HealthHandler, Gravity, Block, CharacterStatModifiers)");
+                 }
+             }
+ 
+@@ -793,7 +793,7 @@
+             }
+             if (addToCardBar)
+             {
+-                SilentAddToCardBar(playerToUpgrade.playerID, cardStats.GetComponent<CardInfo>().sourceCard, twoLetterCode, forceDisplay, forceDisplayDelay);
++                SilentAddToCardBar(playerToUpgrade.PlayerID, cardStats.GetComponent<CardInfo>().sourceCard, twoLetterCode, forceDisplay, forceDisplayDelay);
+             }
+             
+         }
+@@ -818,7 +818,7 @@
+             CardBar[] cardBars = (CardBar[])Traverse.Create(CardBarHandler.instance).Field("cardBars").GetValue();
+             Player playerToReset = (Player)PlayerManager.instance.InvokeMethod("GetPlayerWithID", playerID);
+ 
+-            cardBars[playerToReset.playerID].ClearBar();
++            cardBars[playerToReset.PlayerID].ClearBar();
+ 
+         }
+         public enum SelectionType
+@@ -1028,7 +1028,7 @@
+         {
+             try
+             {
+-                return allCards.Where(card => card.cardName == cardName).Select(card => GetCardID(card)).First();
++                return allCards.Where(card => global::ModdingUtils.Utils.CompatShims.GetCardName(card) == cardName).Select(card => GetCardID(card)).First();
+             }
+             catch
+             {
+@@ -1064,7 +1064,7 @@
+         [Obsolete("GetCardWithName is deprecated since multiple cards can have the same cardName. Use GetCardWithObjectName instead and provided the desired Card's .name field.")]
+         public CardInfo GetCardWithName(string cardName)
+         {
+-            return allCards.Where(card => card.cardName == cardName).First();
++            return allCards.Where(card => global::ModdingUtils.Utils.CompatShims.GetCardName(card) == cardName).First();
+         }
+         public CardInfo GetCardWithObjectName(string name)
+         {
+@@ -1110,11 +1110,7 @@
+ 
+             CardBar[] cardBars = (CardBar[])Traverse.Create(CardBarHandler.instance).Field("cardBars").GetValue();
+ 
+-            Traverse.Create(cardBars[playerID]).Field("ci").SetValue(card);
+-            GameObject source = (GameObject)Traverse.Create(cardBars[playerID]).Field("source").GetValue();
+-            GameObject gameObject = UnityEngine.Object.Instantiate<GameObject>(source, source.transform.position, source.transform.rotation, source.transform.parent);
+-            gameObject.transform.localScale = Vector3.one;
+-            string text = card.cardName;
++            string text = global::ModdingUtils.Utils.CompatShims.GetCardName(card);
+             if (twoLetterCode != "") { text = twoLetterCode; }
+             text = text.Substring(0, 2);
+             string text2 = text[0].ToString().ToUpper();
+@@ -1127,9 +1123,7 @@
+             {
+                 text = text2;
+             }
+-            gameObject.GetComponentInChildren<TextMeshProUGUI>().text = text;
+-            Traverse.Create(gameObject.GetComponent<CardBarButton>()).Field("card").SetValue(card);
+-            gameObject.gameObject.SetActive(true);
++            CompatShims.AddButtonToCardBar(cardBars[playerID], card, text);
+         }
+ 
+         public void AddHiddenCard(CardInfo card)
+diff -ruN -x bin -x obj src/ModdingUtils/Utils/CompatShims.cs build/Utils/CompatShims.cs
+--- src/ModdingUtils/Utils/CompatShims.cs	1969-12-31 19:00:00
++++ build/Utils/CompatShims.cs	2026-09-30 23:50:44
+@@ -0,0 +1,99 @@
++// ROUNDS 2025 (Unity 2022.3) compatibility shims. Not part of upstream ModdingUtils 0.4.8.
++using System;
++using HarmonyLib;
++using UnityEngine;
++using UnityEngine.Localization;
++
++namespace ModdingUtils.Utils
++{
++    internal static class CompatShims
++    {
++        // CardInfo.cardName is now a private serialized field that UnboundLib 4.x no longer fills for custom cards
++        // (it sets m_localizedCardName to a LocalizedString whose entry key is the card title instead).
++        private static readonly AccessTools.FieldRef<CardInfo, string> cardNameRef = AccessTools.FieldRefAccess<CardInfo, string>("cardName");
++
++        // Returns the card's untranslated name, matching the pre-update CardInfo.cardName semantics as closely as possible:
++        // 1. legacy serialized cardName if non-empty (vanilla cards, old-style mod cards)
++        // 2. the localized-name table key when the card has no translation table entry of its own (UnboundLib CustomCard: key == title)
++        // 3. CardInfo.CardName (localized name, or GameObject name if no localized string)
++        internal static string GetCardName(CardInfo card)
++        {
++            if (card == null) return null;
++            try
++            {
++                string raw = cardNameRef(card);
++                if (!string.IsNullOrEmpty(raw)) return raw;
++            }
++            catch { }
++            try
++            {
++                LocalizedString ls = card.LocalizedCardName;
++                if (ls != null && !ls.IsEmpty && card.GetComponent<UnboundLib.Cards.CustomCard>() != null)
++                {
++                    string key = ls.TableEntryReference.Key;
++                    if (!string.IsNullOrEmpty(key)) return key;
++                }
++            }
++            catch { }
++            try
++            {
++                string name = card.CardName;
++                if (name != null) return name;
++            }
++            catch { }
++            return card.name ?? "";
++        }
++
++        // Replacement for the removed CardBar.OnHover(CardInfo, Vector3): same steps as CardBar.OnHover(CardBarButton)
++        // minus CardBarHandler.SetSelection (no button to point at).
++        private static readonly AccessTools.FieldRef<CardBar, GameObject> currentCardRef = AccessTools.FieldRefAccess<CardBar, GameObject>("m_currentCard");
++        private static readonly System.Reflection.MethodInfo doesHoverSetter = AccessTools.PropertySetter(typeof(CardBar), "DoesHover");
++        private static void setDoesHover(CardBar bar, bool v) { doesHoverSetter?.Invoke(bar, new object[] { v }); }
++
++        internal static GameObject ShowCardOnBar(CardBar bar, CardInfo card)
++        {
++            GameObject current = currentCardRef(bar);
++            if (current != null) UnityEngine.Object.Destroy(current);
++            setDoesHover(bar, true);
++            current = CardChoice.instance.AddCardVisual(card, bar.cardPos.transform.position);
++            currentCardRef(bar) = current;
++            foreach (Collider2D col in current.transform.root.GetComponentsInChildren<Collider2D>()) col.enabled = false;
++            Canvas canvas = current.GetComponentInChildren<Canvas>();
++            if (canvas != null) canvas.sortingLayerName = "MostFront";
++            SetScaleToZero sstz = current.GetComponentInChildren<SetScaleToZero>();
++            if (sstz != null)
++            {
++                sstz.enabled = false;
++                sstz.transform.localScale = Vector3.one * 1.15f;
++            }
++            return current;
++        }
++
++        // Replacement for the body shared by both SilentAddToCardBar copies (CardBar fields ci/source and
++        // CardBarButton.card were removed/renamed to m_source / m_cardInfo; label is now UILocalizedString.Text).
++        private static readonly AccessTools.FieldRef<CardBar, GameObject> sourceRef = AccessTools.FieldRefAccess<CardBar, GameObject>("m_source");
++        private static readonly AccessTools.FieldRef<CardBar, System.Collections.Generic.List<CardBarButton>> cardsRef = AccessTools.FieldRefAccess<CardBar, System.Collections.Generic.List<CardBarButton>>("m_cards");
++
++        internal static void AddButtonToCardBar(CardBar bar, CardInfo card, string text)
++        {
++            GameObject source = sourceRef(bar);
++            GameObject gameObject = UnityEngine.Object.Instantiate<GameObject>(source, source.transform.position, source.transform.rotation, source.transform.parent);
++            gameObject.transform.localScale = Vector3.one;
++            UILocalizedString label = gameObject.GetComponentInChildren<UILocalizedString>(true);
++            if (label != null && label.Text != null)
++            {
++                label.Text.text = text; // Text getter also marks the label as modified so Awake() won't blank it
++            }
++            else
++            {
++                TMPro.TextMeshProUGUI tmp = gameObject.GetComponentInChildren<TMPro.TextMeshProUGUI>(true);
++                if (tmp != null) tmp.text = text;
++            }
++            CardBarButton button = gameObject.GetComponent<CardBarButton>();
++            button.m_cardInfo = card;
++            gameObject.gameObject.SetActive(true);
++            // keep D-pad hover navigation and ClearBar() aware of the new button, as CardBar.AddCard does
++            cardsRef(bar)?.Insert(0, button);
++        }
++    }
++}
+diff -ruN -x bin -x obj src/ModdingUtils/Utils/FindPlayer.cs build/Utils/FindPlayer.cs
+--- src/ModdingUtils/Utils/FindPlayer.cs	2026-09-30 23:41:50
++++ build/Utils/FindPlayer.cs	2026-09-30 23:46:30
+@@ -23,7 +23,7 @@
+             Player res = null;
+             foreach (Player player in PlayerManager.instance.players)
+             {
+-                if (player.data.view.ControllerActorNr == actorID && player.playerID == playerID) { res = player; break; }
++                if (player.data.view.ControllerActorNr == actorID && player.PlayerID == playerID) { res = player; break; }
+             }
+             return res;
+         }
+diff -ruN -x bin -x obj src/ModdingUtils/Utils/PlayerStatus.cs build/Utils/PlayerStatus.cs
+--- src/ModdingUtils/Utils/PlayerStatus.cs	2026-09-30 23:41:50
++++ build/Utils/PlayerStatus.cs	2026-09-30 23:46:30
+@@ -22,7 +22,7 @@
+             int num = 0;
+             foreach (Player other_player in PlayerManager.instance.players)
+             {
+-                if (other_player.teamID != player.teamID)
++                if (other_player.TeamID != player.TeamID)
+                 {
+                     num++;
+                 }
+@@ -34,7 +34,7 @@
+             List<Player> res = new List<Player>() { };
+             foreach (Player other_player in PlayerManager.instance.players)
+             {
+-                if (other_player.teamID != player.teamID)
++                if (other_player.TeamID != player.TeamID)
+                 {
+                     res.Add(other_player);
+                 }
+@@ -52,7 +52,7 @@
+             List<Player> res = new List<Player>() { };
+             foreach (Player other_player in PlayerManager.instance.players)
+             {
+-                if (other_player.playerID != player.playerID)
++                if (other_player.PlayerID != player.PlayerID)
+                 {
+                     res.Add(other_player);
+                 }

@@ -1,0 +1,8 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><AssemblyName>Sirenix.Utilities</AssemblyName><RootNamespace>Sirenix.Utilities</RootNamespace></PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../src/Utilities/**/*.cs" />
+    <InternalsVisibleTo Include="Sirenix.Serialization" />
+    <InternalsVisibleTo Include="Sirenix.Serialization.Config" />
+  </ItemGroup>
+</Project>

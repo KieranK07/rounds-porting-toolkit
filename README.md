@@ -169,6 +169,14 @@ dotnet run --project src/rounds-port -c Release -- scan "C:\path\to\MyMod.dll"
 | `src/compathelpers` | helpers `fix` copies into mods | yes |
 | `src/HotReload` | the Hot Reload BepInEx plugin | yes, with BepInEx installed |
 | `src/Runtime` | in-game fixes for old mods running together ([docs/RUNTIME.md](docs/RUNTIME.md)), in testing | yes, with BepInEx installed |
+| `src/AutoFix` | the BepInEx patcher in the Rounds Port package ([docs/AUTOFIX.md](docs/AUTOFIX.md)) | yes, with BepInEx installed |
+| `src/OdinStandIn` | the Odin Serializer stand-in MapsExtended loads (built copy in `odin/`) | yes |
+
+Other folders: `patches/` hand-made patches for specific mod releases ([patches/README.md](patches/README.md)),
+`data/old-libraries.tsv` every old UnboundLib, MMHook and RoundsWithFriends release by SHA-256, `thunderstore/` the
+Rounds Port package, `tests/` the sweep and the in-game bench ([tests/ingame](tests/ingame)). The
+[Gale fork](https://github.com/KieranK07/gale) and the [modpack](https://github.com/KieranK07/rounds-mac-modpack) take
+AutoFix, the Runtime, the patches and the Odin stand-in from here.
 
 Game path: `C:\Program Files (x86)\Steam\steamapps\common\ROUNDS` or the macOS Steam folder by default; elsewhere,
 add `-p:GameDir="<folder>"`. After changing `src/compathelpers` or `src/HotReload`, build it with
