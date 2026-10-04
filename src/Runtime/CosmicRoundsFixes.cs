@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Reflection.Emit;
 using HarmonyLib;
 using UnityEngine;
 
@@ -112,6 +113,40 @@ namespace RoundsPort.Runtime
         static IEnumerable<MethodBase> TargetMethods() => Targets();
 
         static bool Prefix(MonoBehaviour __instance) => __instance.GetComponentInParent<ProjectileHit>() != null;
+    }
+
+    // DroneMono (Drone) has two bugs of its own, on any game version. Start ends by reading the Homing card's
+    // AddObjectToPlayer, which vanilla Homing doesn't have, so it throws on that last line (a sound it never plays).
+    // Update steers the bullet, then sets rot1/rot2.target: two RotSpring fields nothing assigns, so every homing bullet
+    // throws every frame, and logging an exception per bullet per frame costs frames. Both throws come after the real
+    // work: Update skips the two unassigned springs, and Start's throw is dropped once everything before it is set.
+    [HarmonyPatch]
+    internal static class CR_DroneSprings_Fix
+    {
+        static MethodBase Target() => CosmicRoundsTypes.Declared("Update", "DroneMono").FirstOrDefault();
+        static bool Prepare() => Target() != null;
+        static MethodBase TargetMethod() => Target();
+
+        static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
+        {
+            var target = AccessTools.Field(typeof(RotSpring), "target");
+            var set = AccessTools.Method(typeof(CR_DroneSprings_Fix), nameof(SetTarget));
+            foreach (var ins in instructions)
+                yield return ins.StoresField(target) ? new CodeInstruction(OpCodes.Call, set) { labels = ins.labels, blocks = ins.blocks } : ins;
+        }
+
+        public static void SetTarget(RotSpring spring, float value) { if (spring != null) spring.target = value; }
+    }
+
+    [HarmonyPatch]
+    internal static class CR_DroneStart_Fix
+    {
+        static MethodBase Target() => CosmicRoundsTypes.Declared("Start", "DroneMono").FirstOrDefault();
+        static bool Prepare() => Target() != null;
+        static MethodBase TargetMethod() => Target();
+
+        static Exception Finalizer(Exception __exception, MoveTransform ___move, Component ___sync)
+            => __exception is NullReferenceException && ___move != null && ___sync != null ? null : __exception;
     }
 
     // IceTrailMono (Ice Shard) creates its trail with RemoveAfterSeconds(0.5) and then moves it in Update with no
