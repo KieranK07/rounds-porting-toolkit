@@ -11,7 +11,7 @@ namespace RoundsPort.Runtime
     // Fixes that can't be made in a mod's DLL: old mods running together on the current game throw or draw wrong in
     // ways only a runtime patch can catch. Each one restores what the old game did; nothing is added to the game's UI.
     // Hot-reload safe: a new copy can load while an old one is still around, and OnDestroy undoes everything.
-    [BepInPlugin("rounds-port.runtime", "rounds-port Runtime", "1.2.0")]
+    [BepInPlugin("rounds-port.runtime", "rounds-port Runtime", "1.3.0")]
     // The rounds-mac-modpack plugin carries the same fixes (and its own extras); when it is installed it takes over.
     [BepInIncompatibility("kieran.rounds.maccompatfixes")]
     // Soft dependencies only order the load: patches whose target mod is missing are skipped.
