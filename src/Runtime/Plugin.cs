@@ -39,6 +39,14 @@ namespace RoundsPort.Runtime
             log = BepInEx.Logging.Logger.CreateLogSource("rounds-port");
             // The old game build (Steam beta old-rounds-for-mods) runs old mods as they are. SetPlayerID is new in 2025.
             if (AccessTools.Method(typeof(Player), "SetPlayerID") == null) { log.LogInfo("old game build: runtime fixes off"); return; }
+            Start2025();
+        }
+
+        // Apart from Awake: Mono runs the static initialisers of the fix classes a method uses when it compiles that
+        // method, and on the old build those look up 2025-only members (CardBar.m_cards) and throw.
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        void Start2025()
+        {
             // Unique id per load: an old copy's UnpatchSelf must never remove a newer copy's patches, whichever
             // order a loader destroys the old copy and starts the new one in.
             harmony = new Harmony("rounds-port.runtime." + Guid.NewGuid().ToString("N"));
@@ -74,6 +82,7 @@ namespace RoundsPort.Runtime
 
         private void OnDestroy()
         {
+            if (harmony == null) return;   // the old game build: nothing was started
             SceneManager.sceneLoaded -= OnSceneLoaded;
             harmony?.UnpatchSelf();
             MissingText.Restore();
