@@ -17,7 +17,7 @@ Pykess-GunUnblockablePatch	0.0.0	2/0/0	0/0/0	0	GunUnblockablePatch.dll=45cb4c84c
 TeamDK-ZeroGBulletPatch	1.1.0	0/0/0	0/0/0	0	-
 willis81808-ModsPlus	1.6.2	3/0/0	0/0/0	0	ModsPlus.dll=5058a39ad42b23a2
 willuwontu-BlockForcePatch	1.0.1	0/0/0	0/0/0	0	-
-RoundsModding-Performance_Improvements	0.2.0	0/1/1	0/1/1	2	PerformanceImprovements.dll=f97662f7bb5abae4
+RoundsModding-Performance_Improvements	0.2.0	0/1/1	0/1/1	2	PerformanceImprovements.dll=1b8b60d72699bd52
 Pykess-DemonicPactPatch	0.0.0	0/0/0	0/0/0	0	-
 RoundsModding-Grow_Patch	0.0.0	0/1/0	0/1/0	1	GrowPatch.dll=6f9276bb6e88d88a
 Senyksia-ResetAttackCooldownPatch	1.0.1	0/0/0	0/0/0	0	-
@@ -73,7 +73,7 @@ Alphahex-Supcom2Cards	2.0.3	5/0/0	0/0/0	0	Supcom2Cards.dll=0ecfe8d9fd12e673
 Sfinford-ProjectileChargePatch	0.0.1	4/1/0	0/0/0	0	ProjectileChargePatch.dll=b601646bde45ce23
 BossSloth-StickFightMaps	0.3.3	0/0/1	0/0/1	2	-
 Astr0ni-UnstableCards	2.9.0	3/0/0	0/0/0	0	UnstableCards.dll=2690a84df9a4ecab
-Root-Root_Core	1.4.10	8/3/2	0/3/2	2	Root Core Modual.dll=2389d11640c953d5;RootCoreRoundsTrackerPatch.dll=6941b577f61a1d93
+Root-Root_Core	1.4.10	19/3/2	0/3/2	2	Root Core Modual.dll=0456ea26e6fef98b;RootCoreRoundsTrackerPatch.dll=14a1dd5a319a488e
 willreuploadscuzheruinedstuff-PlayerActionsHelper	0.0.1	0/0/0	0/0/0	0	-
 otDan-PickTimer	2.0.1	0/2/0	0/0/0	0	PickTimer.dll=9b8abd7243db04d4
 Root-Root_Maps	0.3.3	1/0/0	0/0/0	0	Root_Maps.dll=be397db9b2f67ce0
@@ -82,18 +82,18 @@ otDan-GameSaver	1.0.7	6/0/0	0/0/0	0	GameSaver.dll=a6da20174fa372d0
 Zom_23-ZOMC	2.4.3	6/0/0	0/0/0	0	ZomC-Cards.dll=5a0396ee7c7242ad
 Root-Port_of_FFC	1.3.11	4/2/0	0/2/0	1	PFFC.dll=1022f3e96f0fe9f2
 Pykess-Faces_Plus	1.0.0	0/0/0	0/0/0	0	-
-BossSloth-LocalZoom	1.1.1	2/2/0	0/1/0	1	LocalZoom.dll=9ad2599d69a65307
+BossSloth-LocalZoom	1.1.1	2/2/0	0/1/0	1	LocalZoom.dll=a2aa8c1aebe81f0e
 willis81808-MapsPlus	0.0.3	1/0/0	0/0/0	0	MapsPlus.dll=d95c41c4aa91aad7
 willis81808-DeckSmithUtil	1.0.0	1/0/0	0/0/0	0	DeckSmithUtil.dll=2a8ae4f399a29fde
-Root-MorePicksPatch	1.0.2	0/0/0	0/0/0	0	-
+Root-MorePicksPatch	1.0.2	4/0/0	0/0/0	0	MorePicksPatch.dll=fd48374b18cc08f9
 Root-Simple_Gamemodes	1.3.7	3/1/1	0/0/1	2	Simple_Gamemodes.dll=7f8fdc6b3eaac5d8
-poppycars-ChaosPoppycarsCardsCore	1.0.9	5/1/0	0/1/0	1	ChaosPoppycarsCardsCore.dll=1a1b9608aeab60dd
+poppycars-ChaosPoppycarsCardsCore	1.0.9	17/1/0	0/1/0	1	ChaosPoppycarsCardsCore.dll=f9087b4e37bc96d1
 Root-UtilityCategories	0.1.0	0/0/0	0/0/0	0	-
 MrFuntik-MFM	3.8.1	10/21/0	0/19/0	1	MFM.dll=922544dd989a06c9
 Pykess-CrosshairForAll	1.0.1	0/0/0	0/0/0	0	-
 Pykess-Toggle_Friendly_Fire	0.0.0	2/0/0	0/0/0	0	ZenithsCommission.dll=09484d3d2a59b68a
-poppycars-ChaosPoppycarsCardsComplex	1.0.6	6/3/0	0/1/0	1	ChaosPoppycarsCardsComplex.dll=7ea7b6c5b3b91c20
+poppycars-ChaosPoppycarsCardsComplex	1.0.6	7/3/0	0/1/0	1	ChaosPoppycarsCardsComplex.dll=977e88a289e08b33
 Sfinford-SCME	3.1.1	0/0/1	0/0/1	2	-
 TrampolineSquad-GodlyCards	1.0.0	1/0/0	0/0/0	0	GodlyCards.dll=d69172757c4d29dc
-Root-Root_Advanced_Cards	1.1.6	5/0/0	0/0/0	0	Root Advanced Cards.dll=6678b34d308d1635
-AALUND13-JARL	2.9.1	3/2/0	0/2/0	1	JARL.dll=11ed36797bc7b7f5
+Root-Root_Advanced_Cards	1.1.6	8/0/0	0/0/0	0	Root Advanced Cards.dll=e2532df8491bb5e4
+AALUND13-JARL	2.9.1	3/2/0	0/2/0	1	JARL.dll=e63eded85899c23d

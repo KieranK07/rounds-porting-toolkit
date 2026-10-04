@@ -326,11 +326,26 @@ sealed partial class Scanner(Game game)
                 or "DeclaredMethod" or "DeclaredField" or "DeclaredProperty" or "DeclaredPropertyGetter" or "DeclaredPropertySetter" or "FieldRefAccess" or "StaticFieldRefAccess";
             bool reflect = call.DeclaringType.FullName == "System.Type" && n is "GetMethod" or "GetField" or "GetProperty";
             bool traverse = dn == "Traverse" && n is "Field" or "Method" or "Property";
-            if (!(accessTools || reflect || traverse)) continue;
+            // UnboundLib's helpers: obj.GetFieldValue("name"), obj.InvokeMethod("name", ...); the type is obj's
+            bool unbound = call.DeclaringType.FullName == "UnboundLib.ExtensionMethods"
+                && n is "GetFieldValue" or "SetFieldValue" or "GetPropertyValue" or "SetPropertyValue" or "InvokeMethod";
+            if (!(accessTools || reflect || traverse || unbound)) continue;
             var ld = FindLdstr(ins, i, 8);
             if (ld == null) continue;
             var name = (string)ld.Operand;
             string kind = n.Contains("Field") ? "Field" : n.Contains("Propert") ? "Property" : "Method";
+            if (unbound)
+            {
+                var at = ins.IndexOf(ld);
+                if (at < 1 || PushedType(m, ins[at - 1]) is not TypeReference recv || recv.FullName == "System.Object" || recv.IsGenericParameter) continue;
+                var rd = Resolve(recv);
+                if (rd == null || HasMember(rd, name, kind)) continue;
+                // only known renames: these helpers also take Types (static members) and a missing name may have been
+                // missing on the old game too
+                var to = kind == "Field" ? (Renamed(rd.Name, name) ?? (HasMember(rd, "m_" + name, "Field") ? "m_" + name : null)) : null;
+                if (to != null) yield return new ReflectSite(ld, $"{dn}.{n}", name, $"{kind.ToLower()} {rd.Name}.{name} not found", to);
+                continue;
+            }
             string where = $"{dn}.{n}";
             if (dn == "AccessTools" && n == "Method" && name.Contains(':'))
             {
@@ -475,6 +490,32 @@ sealed partial class Scanner(Game game)
         for (int j = i - 1; j >= 0 && j >= i - back; j--) if (ins[j].OpCode.Code == Code.Ldstr) return ins[j];
         return null;
     }
+    // Fields the update renamed to something other than m_<name>, with the same type.
+    static string? Renamed(string type, string field) => (type, field) switch { ("CardBarButton", "card") => "m_cardInfo", _ => null };
+
+    // The static type of what one instruction pushes, when it's plain to see (a local, an argument, a field, a call's result).
+    static TypeReference? PushedType(MethodDefinition m, Instruction p)
+    {
+        switch (p.OpCode.Code)
+        {
+            case Code.Ldloc_0: case Code.Ldloc_1: case Code.Ldloc_2: case Code.Ldloc_3:
+                return m.Body.Variables[p.OpCode.Code - Code.Ldloc_0].VariableType;
+            case Code.Ldloc_S: case Code.Ldloc: return ((VariableDefinition)p.Operand).VariableType;
+            case Code.Ldarg_0: case Code.Ldarg_1: case Code.Ldarg_2: case Code.Ldarg_3:
+                int k = p.OpCode.Code - Code.Ldarg_0 - (m.HasThis ? 1 : 0);
+                return k < 0 ? m.DeclaringType : m.Parameters[k].ParameterType;
+            case Code.Ldarg_S: case Code.Ldarg: return ((ParameterDefinition)p.Operand).ParameterType;
+            case Code.Ldfld: case Code.Ldsfld: return ((FieldReference)p.Operand).FieldType;
+            case Code.Castclass: case Code.Isinst: return (TypeReference)p.Operand;
+            case Code.Call: case Code.Callvirt:
+                var r = (MethodReference)p.Operand;
+                // GetComponent<T>() and the like: the result is the generic argument
+                if (r is GenericInstanceMethod g && r.ReturnType.IsGenericParameter && g.GenericArguments.Count == 1) return g.GenericArguments[0];
+                return r.ReturnType;
+            default: return null;
+        }
+    }
+
     static TypeReference? FindLdtoken(Mono.Collections.Generic.Collection<Instruction> ins, int i, int back)
     {
         for (int j = i - 1; j >= 0 && j >= i - back; j--)
