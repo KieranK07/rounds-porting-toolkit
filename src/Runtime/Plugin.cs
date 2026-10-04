@@ -17,11 +17,8 @@ namespace RoundsPort.Runtime
     // Soft dependencies only order the load: patches whose target mod is missing are skipped.
     [BepInDependency("com.willis.rounds.unbound", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("pykess.rounds.plugins.moddingutils", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInDependency("com.XAngelMoonX.rounds.CosmicRounds", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("io.olavim.rounds.mapsextended", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.willis.rounds.cardsplus", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInDependency("com.alphahex.rounds.supcom2cards", BepInDependency.DependencyFlags.SoftDependency)]
-    [BepInDependency("com.Zom.rounds.card", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         Harmony harmony;
