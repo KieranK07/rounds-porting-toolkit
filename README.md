@@ -3,6 +3,13 @@
 Port ROUNDS mods to the current game, **v1.1.2** (Unity 2022.3). That update renamed and removed game code most mods
 used (`playerID`, `teamID`, `maxHealth`, damage methods, card names...), so they stopped loading.
 
+**Playing, not making mods?** Install the **Rounds Port** package with your mods (r2modman, Thunderstore Mod Manager
+or Gale). It swaps in Bknibb's UnboundLib and RoundsWithFriends ports and fixes old mods as the game starts:
+[thunderstore/README.md](thunderstore/README.md). Build it with `python scripts/package.py` (after building
+`src/AutoFix` and `src/Runtime`).
+
+The rest of this page is for mod authors.
+
 - **rounds-port**: finds what v1.1.2 broke in a mod's DLL and fixes the mechanical parts. Works on the compiled DLL,
   so you see the problems before touching your source. One file, nothing to install. Windows, macOS, Linux.
 - **Hot Reload** (optional): swap a mod into the running game without restarting it.

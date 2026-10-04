@@ -1,21 +1,33 @@
-# AutoFix (load-time patcher, in testing)
+# AutoFix (load-time patcher)
 
 A BepInEx preloader patcher that runs `rounds-port fix` on old mods every time ROUNDS starts, before BepInEx loads
 them. Players keep the mods from Thunderstore as they are; nobody needs a new release from the mod's author for the
 parts `fix` handles.
 
-Not released yet: it has been tested outside the game only (see Testing).
+Players get it in the Thunderstore package (`thunderstore/`, built by `scripts/package.py`) with the Runtime and Odin
+Serializer. The Gale fork does the library and patch steps itself before launch; AutoFix then finds nothing left to do
+for them.
 
 ## Install
 
 Put `rounds-port.AutoFix.dll` in `BepInEx/patchers/` (under r2modman, Thunderstore Mod Manager or Gale: the
 profile's `BepInEx/patchers/`). It needs BepInEx 5.4.23 (Windows release or the macOS v5-lts build) and works on the
-current game only; on the `old-rounds-for-mods` beta it does nothing.
+current game only; on the `old-rounds-for-mods` beta it puts every original back and does nothing else.
 
 ## What it does
 
 At each start, before any plugin loads:
 
+- `HideManagerGameObject` is turned on in `BepInEx.cfg` (the current game destroys plugins' objects otherwise). The
+  Chainloader reads it after the patchers, so it counts from the first start.
+- **Libraries:** a file from an old UnboundLib 3, MMHook or RoundsWithFriends 2 release gets Bknibb's port in its place
+  (UnboundLib 4.2.5 with Octokit, its MMHOOK, RoundsWithFriends 3.0.10), downloaded from his GitHub releases into
+  `BepInEx/cache/rounds-port/downloads` and checked by SHA-256. .NET's own HTTPS first, then `curl` (Windows 10+ and macOS
+  have it). If any other copy of the library isn't an old release (a package brings a newer port), the old files are
+  left alone and BepInEx loads the newer one. Offline: the old file stays and the next start tries again.
+- **Curated patches:** exact mod versions that needed hand-made fixes (Cosmic Rounds 2.7.0, MapsExtended 1.4.2,
+  ModdingUtils 0.4.8, ...) get the rounds-mac-modpack's binary patch, found by the file's SHA-256 (`src/AutoFix/curated`,
+  made by `scripts/curated.py` from the Gale fork's copy), then `fix` as usual.
 - Every DLL in `BepInEx/plugins` that uses the game or UnboundLib is scanned and fixed, like `rounds-port fix`.
 - A mod `fix` changes is **replaced in place** by the fixed copy. The original goes to
   `BepInEx/cache/rounds-port/originals/<sha256>.dll`.
@@ -27,9 +39,9 @@ At each start, before any plugin loads:
 - When a mod manager updates or reinstalls a mod, the new file is fixed again.
 - Files are swapped by renaming, never written into. Gale hard-links mods to its download cache, and that copy stays
   the original.
-- Old builds of UnboundLib (3.x) and RoundsWithFriends (2.x), and the MMHOOK made for the old game, are skipped with
-  a warning: use Bknibb's ports. They're recognised by what's in the file, not the folder name, so Bknibb's files
-  installed into the old packages' folders are used.
+- Old builds of UnboundLib (3.x) and RoundsWithFriends (2.x), and the MMHOOK made for the old game, are recognised by
+  what's in the file, not the folder name, so Bknibb's files installed into the old packages' folders are used.
+  Replaced ones count as fixed: `RestoreOriginals` and the old game build put them back.
 
 One line per mod in `BepInEx/LogOutput.log`, from source `rounds-port`:
 
@@ -75,5 +87,5 @@ UnboundLib and RWF), hard-linked like Gale's:
 - None of the hard-linked originals changed.
 - Same results with the Windows release's `BepInEx.dll` and the macOS v5-lts build.
 
-Still to test in game: the patcher loads and runs before the Chainloader, under an r2modman profile launch too; a
-modpack of Thunderstore originals plays a round; multiplayer against the ported modpack; startup time on Windows.
+In game (Windows, `port-tests/ingame`): a profile laid out as r2modman does (Thunderstore originals plus the package, no
+Gale layer) starts, swaps the libraries, applies the curated patches and plays a full AI match.

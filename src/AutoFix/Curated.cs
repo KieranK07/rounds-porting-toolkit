@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.IO.Compression;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using BepInEx.Logging;
@@ -103,40 +104,95 @@ sealed class Curated(string cache, ManualLogSource log)
         var dest = Path.Combine(cache, "downloads", p.Sha + ".dll");
         if (File.Exists(dest) && Sha(File.ReadAllBytes(dest)) == p.Sha) return dest;
         Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+        // Mono has no TLS this early in the game's start (the engine brings it), so .NET's own HTTPS usually fails here.
+        // WinHTTP is Windows' own (and Wine's, under Proton); curl is macOS's and Linux's.
         byte[]? data = null;
-        string why = "";
-        try
+        var tried = new List<string>();
+        foreach (var (how, get) in new (string, Func<byte[]>)[] { (".NET", () => DotNet(p.Url)), ("WinHTTP", () => WinHttp.Get(p.Url)), ("curl", () => Curl(p.Url, dest + ".rptmp")) })
         {
-            ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072;   // TLS 1.2
-            var req = (HttpWebRequest)WebRequest.Create(p.Url);
-            req.UserAgent = "rounds-port";
-            req.Timeout = req.ReadWriteTimeout = 20000;
-            using var res = req.GetResponse();
-            using var s = res.GetResponseStream()!;
-            var ms = new MemoryStream();
-            s.CopyTo(ms);
-            data = ms.ToArray();
-        }
-        catch (Exception e) { why = e.Message; }
-        if (data == null || Sha(data) != p.Sha)
-        {
-            var tmp = dest + ".rptmp";
             try
             {
-                using var curl = Process.Start(new ProcessStartInfo("curl", $"-fsSL --connect-timeout 10 --max-time 40 -o \"{tmp}\" \"{p.Url}\"")
-                    { UseShellExecute = false, CreateNoWindow = true })!;
-                curl.WaitForExit(45000);
-                data = File.Exists(tmp) ? File.ReadAllBytes(tmp) : null;
+                data = get();
+                if (Sha(data) == p.Sha) { log.LogInfo($"downloaded Bknibb's {p.File} ({how})"); break; }
+                tried.Add($"{how}: not the file it should be");
             }
-            catch (Exception e) { why += "; curl: " + e.Message; }
-            finally { try { File.Delete(tmp); } catch { } }
+            catch (Exception e) { tried.Add($"{how}: {e.Message}"); }
+            data = null;
         }
-        if (data == null || Sha(data) != p.Sha) throw new IOException(data == null ? why : "it doesn't match its SHA-256");
-        log.LogInfo($"downloaded Bknibb's {p.File}" + (why.Length > 0 ? $" with curl (.NET: {why})" : ""));
+        if (data == null) throw new IOException(string.Join("; ", tried));
         File.WriteAllBytes(dest + ".rptmp", data);
         if (File.Exists(dest)) File.Delete(dest);
         File.Move(dest + ".rptmp", dest);
         return dest;
+    }
+
+    static byte[] DotNet(string url)
+    {
+        ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072;   // TLS 1.2
+        var req = (HttpWebRequest)WebRequest.Create(url);
+        req.UserAgent = "rounds-port";
+        req.Timeout = req.ReadWriteTimeout = 20000;
+        using var res = req.GetResponse();
+        using var s = res.GetResponseStream()!;
+        var ms = new MemoryStream();
+        s.CopyTo(ms);
+        return ms.ToArray();
+    }
+
+    static byte[] Curl(string url, string tmp)
+    {
+        try
+        {
+            using var curl = Process.Start(new ProcessStartInfo("curl", $"-fsSL --connect-timeout 10 --max-time 40 -o \"{tmp}\" \"{url}\"")
+                { UseShellExecute = false, CreateNoWindow = true })!;
+            if (!curl.WaitForExit(45000)) { try { curl.Kill(); } catch { } throw new IOException("timed out"); }
+            if (curl.ExitCode != 0) throw new IOException($"exit code {curl.ExitCode}");
+            return File.ReadAllBytes(tmp);
+        }
+        finally { try { File.Delete(tmp); } catch { } }
+    }
+
+    // WinHTTP from P/Invoke: HTTPS through the OS, follows GitHub's redirect to its download host.
+    static class WinHttp
+    {
+        [DllImport("winhttp.dll", SetLastError = true, CharSet = CharSet.Unicode)] static extern IntPtr WinHttpOpen(string agent, uint access, string? proxy, string? bypass, uint flags);
+        [DllImport("winhttp.dll", SetLastError = true, CharSet = CharSet.Unicode)] static extern IntPtr WinHttpConnect(IntPtr session, string host, ushort port, uint reserved);
+        [DllImport("winhttp.dll", SetLastError = true, CharSet = CharSet.Unicode)] static extern IntPtr WinHttpOpenRequest(IntPtr connect, string verb, string path, string? version, string? referrer, IntPtr accept, uint flags);
+        [DllImport("winhttp.dll", SetLastError = true)] static extern bool WinHttpSetTimeouts(IntPtr h, int resolve, int connect, int send, int receive);
+        [DllImport("winhttp.dll", SetLastError = true)] static extern bool WinHttpSendRequest(IntPtr request, IntPtr headers, uint headersLength, IntPtr optional, uint optionalLength, uint totalLength, UIntPtr context);
+        [DllImport("winhttp.dll", SetLastError = true)] static extern bool WinHttpReceiveResponse(IntPtr request, IntPtr reserved);
+        [DllImport("winhttp.dll", SetLastError = true)] static extern bool WinHttpQueryHeaders(IntPtr request, uint info, IntPtr name, ref uint buffer, ref uint length, IntPtr index);
+        [DllImport("winhttp.dll", SetLastError = true)] static extern bool WinHttpQueryDataAvailable(IntPtr request, out uint available);
+        [DllImport("winhttp.dll", SetLastError = true)] static extern bool WinHttpReadData(IntPtr request, byte[] buffer, uint toRead, out uint read);
+        [DllImport("winhttp.dll")] static extern bool WinHttpCloseHandle(IntPtr h);
+
+        public static byte[] Get(string url)
+        {
+            var u = new Uri(url);
+            IntPtr s = IntPtr.Zero, c = IntPtr.Zero, r = IntPtr.Zero;
+            try
+            {
+                s = WinHttpOpen("rounds-port", 0, null, null, 0);   // 0: the system's proxy settings
+                if (s == IntPtr.Zero) throw new IOException($"WinHttpOpen: error {Marshal.GetLastWin32Error()}");
+                WinHttpSetTimeouts(s, 10000, 10000, 20000, 20000);
+                c = WinHttpConnect(s, u.Host, (ushort)u.Port, 0);
+                if (c != IntPtr.Zero) r = WinHttpOpenRequest(c, "GET", u.PathAndQuery, null, null, IntPtr.Zero, 0x00800000);   // WINHTTP_FLAG_SECURE
+                if (r == IntPtr.Zero || !WinHttpSendRequest(r, IntPtr.Zero, 0, IntPtr.Zero, 0, 0, UIntPtr.Zero) || !WinHttpReceiveResponse(r, IntPtr.Zero))
+                    throw new IOException($"error {Marshal.GetLastWin32Error()}");
+                uint status = 0, len = 4;
+                WinHttpQueryHeaders(r, 19 | 0x20000000, IntPtr.Zero, ref status, ref len, IntPtr.Zero);   // STATUS_CODE | FLAG_NUMBER
+                if (status != 200) throw new IOException($"HTTP {status}");
+                var ms = new MemoryStream();
+                var buf = new byte[65536];
+                while (WinHttpQueryDataAvailable(r, out var n) && n > 0)
+                {
+                    if (!WinHttpReadData(r, buf, Math.Min(n, (uint)buf.Length), out var read) || read == 0) break;
+                    ms.Write(buf, 0, (int)read);
+                }
+                return ms.ToArray();
+            }
+            finally { foreach (var h in new[] { r, c, s }) if (h != IntPtr.Zero) WinHttpCloseHandle(h); }
+        }
     }
 
     static Dictionary<string, Patch> ReadPatches()
