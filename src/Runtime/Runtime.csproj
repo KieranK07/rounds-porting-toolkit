@@ -25,6 +25,7 @@
     <Reference Include="$(Managed)/UnityEngine.UI.dll" Private="false" />
     <Reference Include="$(Managed)/UnityEngine.UIModule.dll" Private="false" />
     <Reference Include="$(Managed)/UnityEngine.AssetBundleModule.dll" Private="false" />
+    <Reference Include="$(Managed)/Unity.Postprocessing.Runtime.dll" Private="false" />
     <Reference Include="$(Managed)/netstandard.dll" Private="false" />
   </ItemGroup>
 </Project>

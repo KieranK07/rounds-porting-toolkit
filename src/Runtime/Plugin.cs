@@ -62,6 +62,7 @@ namespace RoundsPort.Runtime
             MapsExtClientSync_Fix.Host = helper.AddComponent<CoroutineHost>();
             if (MapsExtClientSync_Fix.Active(harmony.Id)) log.LogInfo("MapsExtended client map sync fix: on");
             MissingText.Apply(log);
+            CameraStack_Fix.Postfix(MainCam.instance);   // loaded after the scene's camera woke up
             CardVisualFixesRunner.Log = log;
             helper.AddComponent<CardVisualFixesRunner>();
             CardBarUpdateRunner.Log = log;
@@ -250,6 +251,19 @@ namespace RoundsPort.Runtime
                 if (s == null || string.IsNullOrEmpty(s.stat) || (s.LocalizedStat != null && !s.LocalizedStat.IsEmpty)) continue;
                 if (lines[first + i].childCount > 0) lines[first + i].GetChild(0).GetComponent<UILocalizedString>()?.ResetReference(s.stat);
             }
+        }
+    }
+
+    // The main camera's post-processing writes its last pass straight to the screen. Since Unity 2022 a camera that
+    // renders after it (Map Embiggener's out-of-bounds camera) gets the stack's own buffer copied over that, so only
+    // the background was left on screen. The old build (Unity 2018) kept both; ending on the camera target does that.
+    [HarmonyPatch(typeof(MainCam), "Awake")]
+    internal static class CameraStack_Fix
+    {
+        internal static void Postfix(MainCam __instance)
+        {
+            var layer = __instance ? __instance.GetComponent<UnityEngine.Rendering.PostProcessing.PostProcessLayer>() : null;
+            if (layer) layer.finalBlitToCameraTarget = false;
         }
     }
 

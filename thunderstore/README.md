@@ -16,8 +16,8 @@ Install it next to your mods. Nothing to set up.
   Classes Manager Reborn 1.5.5, RarityLib 1.3.0, ModsPlus 1.6.2, Will's Wacky Map Objects 1.2.4, CardBarPatch 2.1.1,
   GunChargePatch 0.0.4, Performance Improvements 0.2.0, and a few small patches.
 - **In game:** fixes for problems that only show while playing. Card names showing as missing translations, stat
-  lines without their names, empty card bar buttons, the first card pick not showing, MapsExtended maps without their physics objects for clients,
-  modded cards out of sync between players online.
+  lines without their names, empty card bar buttons, the first card pick not showing, MapsExtended maps without their
+  physics objects for clients, a grey screen with Map Embiggener, modded cards out of sync between players online.
 
 Which of the 98 most-downloaded mods were tested and how they did:
 [COMPATIBILITY.md](https://github.com/KieranK07/rounds-porting-toolkit/blob/main/docs/COMPATIBILITY.md).
