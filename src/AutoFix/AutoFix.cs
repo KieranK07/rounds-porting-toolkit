@@ -25,6 +25,7 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
 
     readonly string indexPath = Path.Combine(settings.Cache, "index.tsv");
     readonly string originals = Path.Combine(settings.Cache, "originals");
+    readonly Curated curated = new(settings.Cache, log);
     Game? game;
     Scanner? scanner;
 
@@ -46,11 +47,14 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
         var (oldKey, index) = ReadIndex();
         if (oldKey == key + " old-game") { log.LogInfo("this is the old game build (old-rounds-for-mods): mods work on it as they are"); return; }
         bool keyChanged = oldKey != key;
+        var ports = curated.Plan(files.Select(f => f.fi.FullName)).ToList();
         var next = new SortedDictionary<string, Entry>(StringComparer.Ordinal);
         var todo = new List<(string rel, FileInfo fi)>();
         foreach (var (rel, fi) in files)
         {
-            if (!keyChanged && index.TryGetValue(rel, out var e) && e.Size == fi.Length && e.Time == fi.LastWriteTimeUtc.Ticks) next[rel] = e;
+            // an old library left as it was (its port couldn't be downloaded then) is looked at again once it can be
+            if (!keyChanged && index.TryGetValue(rel, out var e) && e.Size == fi.Length && e.Time == fi.LastWriteTimeUtc.Ticks
+                && !(e.Result == Old && ports.Count > 0)) next[rel] = e;
             else todo.Add((rel, fi));
         }
 
@@ -62,11 +66,14 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
             try { game = new Game(settings.GameDir, settings.Managed, settings.Core, settings.Plugins); }
             catch (UserError)
             {
+                // mods fixed for the current game don't work on the old one: they get their originals back
+                if (index.Count > 0) RestoreOriginals(off: false);
                 WriteIndex(key + " old-game", new SortedDictionary<string, Entry>());
                 log.LogInfo("this is the old game build (old-rounds-for-mods): mods work on it as they are");
                 return;
             }
-            if (game.UnboundLib == null)
+            foreach (var p in ports) game.Resolver.Set(p);   // mods are fixed against the ports going in this start
+            if (game.Resolver.Path("UnboundLib") == null)
                 log.LogWarning("UnboundLib 4 isn't installed: most mods need it (Bknibb's port, github.com/Bknibb/UnboundLib)");
             scanner = new Scanner(game);
             foreach (var (rel, fi) in todo)
@@ -140,19 +147,45 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
             if (ours) { Replace(path, orig); log.LogInfo($"put back the original of {rel}"); }
             return new Entry { Sha = origSha, Orig = origSha, Result = result, Note = note };
         }
+        // bytes become the plugin; its original is kept in the cache
+        Entry Save(byte[] bytes, string? note, string result)
+        {
+            var newSha = Sha(bytes);
+            try
+            {
+                SaveOriginal(origSha, orig);
+                if (newSha != sha) Replace(path, bytes);
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+                log.LogWarning($"couldn't save the fixed copy of {rel}, left as it is: {ex.Message}");
+                return new Entry { Sha = sha, Orig = origSha, Result = Error, Note = OneLine("can't write: " + ex.Message), Retry = true };
+            }
+            return new Entry { Sha = newSha, Orig = origSha, Result = result, Note = note ?? "" };
+        }
 
         if (Matches(rel, settings.Exclude)) return Done(Excluded);
+        // Bknibb's port in place of an old library, or a hand-made patch for this exact file (Curated.cs)
+        byte[] input;
+        try { input = curated.Apply(path, orig, origSha); }
+        catch (Exception ex)
+        {
+            log.LogWarning($"{rel}: {ex.Message}; fixing it without its curated patch");
+            input = orig;
+        }
+        bool curatedOnly = input != orig;   // reference: Apply returns the same array when nothing applies
         ModuleDefinition module;
         var rp = new ReaderParameters { AssemblyResolver = game!.Resolver, ReadingMode = ReadingMode.Immediate };
         try
         {
             // the same DLLs the CLI picks from a folder (Program.Expand): ones that use the game or UnboundLib
-            using (var peek = ModuleDefinition.ReadModule(new MemoryStream(orig)))
+            using (var peek = ModuleDefinition.ReadModule(new MemoryStream(input)))
             {
                 if (peek.Assembly != null && Game.OldLibrary(path, peek.Assembly.Name) is string old) return Done(Old, old);
-                if (!peek.AssemblyReferences.Any(a => a.Name is "Assembly-CSharp" or "UnboundLib") || peek.Name.StartsWith("MMHOOK")) return Done(NotMod);
+                if (!peek.AssemblyReferences.Any(a => a.Name is "Assembly-CSharp" or "UnboundLib") || peek.Name.StartsWith("MMHOOK"))
+                    return curatedOnly ? Save(input, null, Fixed) : Done(NotMod);
             }
-            module = ModuleDefinition.ReadModule(new MemoryStream(orig), rp);
+            module = ModuleDefinition.ReadModule(new MemoryStream(input), rp);
         }
         catch (Exception ex)
         {
@@ -163,7 +196,7 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
         scanner!.Scan(module);
         var fixer = new Fixer(module, game, scanner);
         fixer.Run();
-        if (!fixer.Changed) return Done(Unchanged);
+        if (!fixer.Changed) return curatedOnly ? Save(input, null, Fixed) : Done(Unchanged);
         var ms = new MemoryStream();
         module.Write(ms);
         var fixedBytes = ms.ToArray();
@@ -176,24 +209,15 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
             return Done(Manual, OneLine(note));
         }
 
-        var fixedSha = Sha(fixedBytes);
-        try
-        {
-            SaveOriginal(origSha, orig);
-            if (fixedSha != sha) Replace(path, fixedBytes);
-        }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
-        {
-            log.LogWarning($"couldn't save the fixed copy of {rel}, left as it is: {ex.Message}");
-            return new Entry { Sha = sha, Orig = origSha, Result = Error, Note = OneLine("can't write: " + ex.Message), Retry = true };
-        }
+        var saved = Save(fixedBytes, manual.Count > 0 ? $"{manual.Count} MANUAL left" : null, Fixed);
+        if (saved.Result == Error) return saved;
         var review = left.Where(i => i.Fix == Fix.Review).Select(i => i.Kind).Distinct().ToList();
         var line = $"fixed {rel}: {fixer.Changes.Count()} kind{(fixer.Changes.Count() == 1 ? "" : "s")} of change" +
                    (review.Count > 0 ? $"; to check in game: {string.Join(", ", review)}" : "");
         if (manual.Count == 0) log.LogInfo(line);
         else log.LogWarning(line + $"; {manual.Count} MANUAL item{(manual.Count == 1 ? "" : "s")} left, which only its author can fix: " +
                             string.Join("; ", manual.Take(3).Select(i => i.What)) + (manual.Count > 3 ? "; ..." : ""));
-        return new Entry { Sha = fixedSha, Orig = origSha, Result = Fixed, Note = manual.Count > 0 ? $"{manual.Count} MANUAL left" : "" };
+        return saved;
     }
 
     // On Windows a virus scanner (or a mod manager still finishing an install) can hold a fresh DLL open for a moment,
@@ -216,7 +240,7 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
     }
 
     // Puts every fixed mod that is still our copy back to its original, and forgets the index.
-    public void RestoreOriginals()
+    public void RestoreOriginals(bool off = true)
     {
         var (_, index) = ReadIndex();
         int n = 0;
@@ -228,12 +252,13 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
             {
                 if (!File.Exists(path) || !File.Exists(o) || Sha(File.ReadAllBytes(path)) != kv.Value.Sha) continue;
                 Replace(path, File.ReadAllBytes(o));
+                Curated.Restored(path);
                 n++;
             }
             catch (Exception ex) { log.LogWarning($"couldn't put back the original of {kv.Key}: {ex.Message}"); }
         }
         TryDelete(indexPath);
-        log.LogInfo($"put back {n} original mod{(n == 1 ? "" : "s")}; AutoFix is off now (Enabled in rounds-port.autofix.cfg)");
+        log.LogInfo($"put back {n} original mod{(n == 1 ? "" : "s")}" + (off ? "; AutoFix is off now (Enabled in rounds-port.autofix.cfg)" : ": this is the old game build"));
     }
 
     // The file on disk is our fixed copy, not the original.

@@ -9,7 +9,7 @@
          file can't be swapped). The compiler names the assembly after its file, so it's built as 0rounds-port.AutoFix.dll
          and copied to rounds-port.AutoFix.dll. -->
     <AssemblyName>0rounds-port.AutoFix</AssemblyName>
-    <Version>1.2.0</Version>
+    <Version>1.3.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
@@ -28,6 +28,7 @@
   <ItemGroup>
     <Compile Include="../rounds-port/Scanner.cs;../rounds-port/Fixer.cs;../rounds-port/Known.cs;../rounds-port/Game.cs" LinkBase="core" />
     <EmbeddedResource Include="../rounds-port/helpers/compathelpers.dll" LogicalName="compathelpers.dll" />
+    <EmbeddedResource Include="curated/*" LogicalName="curated/%(Filename)%(Extension)" />
   </ItemGroup>
   <Target Name="CopyToPlainName" AfterTargets="Build">
     <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(TargetDir)rounds-port.AutoFix.dll" />

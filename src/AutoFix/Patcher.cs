@@ -15,6 +15,15 @@ public static class AutoFixPatcher
     public static void Initialize()
     {
         var log = Logger.CreateLogSource("rounds-port");
+        try
+        {
+            // The current game destroys the BepInEx manager object, and plugins' objects with it, unless it's hidden.
+            // Read by the Chainloader after the patchers, so it takes effect on this start.
+            var core = (ConfigFile)typeof(ConfigFile).GetProperty("CoreConfig", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!.GetValue(null, null);   // internal
+            var hide = core.Bind("Chainloader", "HideManagerGameObject", false);
+            if (!hide.Value) { hide.Value = true; log.LogInfo("turned on HideManagerGameObject in BepInEx.cfg"); }
+        }
+        catch (Exception e) { log.LogWarning($"couldn't turn on HideManagerGameObject: {e.Message}"); }
         try { Run(log); }
         catch (Exception e) { log.LogError($"AutoFix failed, mods are left as they are: {e}"); }
     }

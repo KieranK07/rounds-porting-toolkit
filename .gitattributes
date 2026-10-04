@@ -2,3 +2,5 @@
 * text=auto eol=lf
 *.dll binary
 *.pdb binary
+*.bsdf binary
+*.png binary

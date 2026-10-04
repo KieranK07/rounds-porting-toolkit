@@ -1,0 +1,9 @@
+{
+  "name": "Rounds_Port",
+  "version_number": "1.0.0",
+  "website_url": "https://github.com/KieranK07/rounds-porting-toolkit",
+  "description": "Play mods made before the December 2025 update on the current game. Swaps in Bknibb's UnboundLib and RoundsWithFriends ports and fixes old mods as the game starts.",
+  "dependencies": [
+    "BepInEx-BepInExPack_ROUNDS-5.4.1901"
+  ]
+}
