@@ -35,6 +35,8 @@ namespace RoundsPort.Runtime
         private void Awake()
         {
             log = BepInEx.Logging.Logger.CreateLogSource("rounds-port");
+            // The old game build (Steam beta old-rounds-for-mods) runs old mods as they are. SetPlayerID is new in 2025.
+            if (AccessTools.Method(typeof(Player), "SetPlayerID") == null) { log.LogInfo("old game build: runtime fixes off"); return; }
             // Unique id per load: an old copy's UnpatchSelf must never remove a newer copy's patches, whichever
             // order a loader destroys the old copy and starts the new one in.
             harmony = new Harmony("rounds-port.runtime." + Guid.NewGuid().ToString("N"));
