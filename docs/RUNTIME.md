@@ -25,6 +25,7 @@ rounds-mac-modpack's Mac Compat Fixes is installed, BepInEx skips this plugin: t
 | UnboundLib 4 health bars | Bknibb's UnboundLib 4 colours health bars for players with respawns left, reading `data.stats` every frame; things that aren't players (Cards+ snakes) have none and it threw every frame. UnboundLib 3 had no such patch |
 | Cosmic Rounds Drone | Two springs nothing assigns, and a missing Homing object at the end of `Start`: an error per bullet per frame |
 | Supcom2 team colours | Darkenoid and Wilfindja find their player with `GetComponentInParent<Player>()` from `OnAddCard`. The picker is the round's loser, dead and inactive, and Unity 2022 finds nothing on an inactive object: the pick threw and never finished. Looked up again including inactive objects |
+| ZomC Perseverance (Pristine) | Adds a ModdingUtils `HealthBasedEffect` to the picker in `OnAddCard` and uses the stats its `Awake` fills in. The picker is dead (inactive), so `Awake` hasn't run and the pick threw. The stats are filled in right after the `AddComponent` when they're still empty |
 
 Source: `src/Runtime`. Patches whose target mod isn't installed are skipped. Safe to swap with Hot Reload: every load
 patches under its own Harmony id and undoes everything when it unloads.
