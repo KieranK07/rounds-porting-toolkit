@@ -3,8 +3,8 @@
 Fixes for specific releases of mods that `rounds-port fix` can't port by itself. Each one is a binary diff
 (BSDIFF40) from the exact Thunderstore file to its fixed copy, so nothing here contains a mod.
 
-AutoFix applies them for any mod manager (`python scripts/curated.py` copies them into `src/AutoFix/curated`), and the
-Gale fork and the modpack take them from here too.
+[DuctTape](https://github.com/KieranK07/DuctTape)'s AutoFix applies them for any mod manager (its `scripts/curated.py`
+copies them in), and Crosswind and the modpack take them from here too.
 
 ## patches.tsv
 

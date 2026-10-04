@@ -2,7 +2,7 @@ using Mono.Cecil;
 
 // The ROUNDS install and the assembly resolver that scan/fix check mods against:
 // game Managed/ > BepInEx/core > --ref folders > the mods' own folders > BepInEx/plugins.
-// Shared with the load-time patcher (src/AutoFix); the CLI's own part (Steam lookup, downloads) is in Game.Cli.cs.
+// Shared with the load-time patcher (DuctTape's AutoFix); the CLI's own part (Steam lookup, downloads) is in Game.Cli.cs.
 sealed partial class Game
 {
     public readonly string Dir, Managed;
@@ -10,7 +10,7 @@ sealed partial class Game
     public readonly ModuleDefinition AssemblyCSharp;
     public string? UnboundLib;   // "4.2.5 (path)" when found
 
-    // For the load-time patcher (src/AutoFix): BepInEx's own paths. Under a mod manager, plugins is in its profile.
+    // For the load-time patcher (DuctTape's AutoFix): BepInEx's own paths. Under a mod manager, plugins is in its profile.
     public Game(string dir, string managed, string core, string plugins)
     {
         Dir = dir;

@@ -1,6 +1,6 @@
 # Compatibility
 
-The 98 most-downloaded Thunderstore mods with code (October 2026), on the current game with Rounds Port's fixes. Each was installed in a batch of about ten, with their dependencies, and played in a 12-minute match between two of the game's AI players, offered the batch's cards in turn (25 to 50 picks per match, so in a big batch not every card came up). "In the match" is what happened there; a library has no cards of its own.
+The 98 most-downloaded Thunderstore mods with code (October 2026), on the current game with DuctTape's fixes. Each was installed in a batch of about ten, with their dependencies, and played in a 12-minute match between two of the game's AI players, offered the batch's cards in turn (25 to 50 picks per match, so in a big batch not every card came up). "In the match" is what happened there; a library has no cards of its own.
 
 | Mod | Version | AutoFix | In the match | Notes |
 |---|---|---|---|---|

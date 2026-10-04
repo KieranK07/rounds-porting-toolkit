@@ -1,4 +1,4 @@
-"""The same mods on both game builds: profiles/b<i> (2025 game + Rounds Port) against profiles/o<i> (the
+"""The same mods on both game builds: profiles/b<i> (2025 game + DuctTape) against profiles/o<i> (the
 old-rounds-for-mods beta, mods untouched). An error source only on 2025 is a port problem until explained.
 
     python oldnew.py [0 1 ...]

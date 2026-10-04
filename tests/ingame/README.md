@@ -11,7 +11,7 @@ Profiles, downloads (`store/`) and run output stay here and are not committed.
 
 | Command | Does |
 |---|---|
-| `python make-profile.py profiles/x Author-Name ...` | a profile laid out like Gale's, from Thunderstore, with the Gale layer; `--package <zip>` lays it out like r2modman with the Rounds Port package instead; `--plain` leaves the mods untouched |
+| `python make-profile.py profiles/x Author-Name ...` | a profile laid out like Gale's, from Thunderstore, with the Gale layer; `--package <zip>` lays it out like r2modman with the DuctTape package instead; `--plain` leaves the mods untouched |
 | `python pilot.py matches profiles/b0 profiles/b1 ...` | a match between two AI players per profile; `match` / `online` for one |
 | `python oldnew.py 0 1 ...` | the same profiles on the 2025 game (`b<i>`) and the `old-rounds-for-mods` beta (`o<i>`) |
 | `python compare-shots.py out.html 7 8 0` | each card captured on both builds, side by side |

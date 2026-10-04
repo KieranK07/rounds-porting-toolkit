@@ -6,10 +6,8 @@ used (`playerID`, `teamID`, `maxHealth`, damage methods, card names...), so they
 **On a Mac, or want it all in one app?** [Crosswind](https://github.com/KieranK07/crosswind), a mod manager based on Gale, runs on Mac and Windows
 and does all of this for you: install mods as usual and press Launch.
 
-**Playing, not making mods?** Install the **Rounds Port** package with your mods (r2modman, Thunderstore Mod Manager
-or Gale). It swaps in Bknibb's UnboundLib and RoundsWithFriends ports and fixes old mods as the game starts:
-[thunderstore/README.md](thunderstore/README.md). Build it with `python scripts/package.py` (after building
-`src/AutoFix` and `src/Runtime`).
+**Playing, not making mods?** [DuctTape](https://github.com/KieranK07/DuctTape) is the mod that does this as the game
+starts: it swaps in Bknibb's UnboundLib and RoundsWithFriends ports and fixes old mods, with any mod manager.
 
 The rest of this page is for mod authors.
 
@@ -171,15 +169,13 @@ dotnet run --project src/rounds-port -c Release -- scan "C:\path\to\MyMod.dll"
 | `src/rounds-port` | the CLI (Mono.Cecil) | no: the two DLLs below are checked in, prebuilt |
 | `src/compathelpers` | helpers `fix` copies into mods | yes |
 | `src/HotReload` | the Hot Reload BepInEx plugin | yes, with BepInEx installed |
-| `src/Runtime` | in-game fixes for old mods running together ([docs/RUNTIME.md](docs/RUNTIME.md)), in testing | yes, with BepInEx installed |
-| `src/AutoFix` | the BepInEx patcher in the Rounds Port package ([docs/AUTOFIX.md](docs/AUTOFIX.md)) | yes, with BepInEx installed |
 | `src/OdinStandIn` | the Odin Serializer stand-in MapsExtended loads (built copy in `odin/`) | yes |
 
 Other folders: `patches/` hand-made patches for specific mod releases ([patches/README.md](patches/README.md)),
-`data/old-libraries.tsv` every old UnboundLib, MMHook and RoundsWithFriends release by SHA-256, `thunderstore/` the
-Rounds Port package, `tests/` the sweep and the in-game bench ([tests/ingame](tests/ingame)). The
-[Crosswind](https://github.com/KieranK07/crosswind) (the Gale fork) and the [modpack](https://github.com/KieranK07/rounds-mac-modpack) take
-AutoFix, the Runtime, the patches and the Odin stand-in from here.
+`data/old-libraries.tsv` every old UnboundLib, MMHook and RoundsWithFriends release by SHA-256, `tests/` the sweep and
+the in-game bench ([tests/ingame](tests/ingame)). [DuctTape](https://github.com/KieranK07/DuctTape) (the mod, AutoFix and
+the Runtime) builds from `src/rounds-port`; it, [Crosswind](https://github.com/KieranK07/crosswind) and the
+[modpack](https://github.com/KieranK07/rounds-mac-modpack) take the patches and the Odin stand-in from here.
 
 Game path: `C:\Program Files (x86)\Steam\steamapps\common\ROUNDS` or the macOS Steam folder by default; elsewhere,
 add `-p:GameDir="<folder>"`. After changing `src/compathelpers` or `src/HotReload`, build it with

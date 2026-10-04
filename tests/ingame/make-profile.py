@@ -3,7 +3,7 @@ ROUNDS layer and the macOS BepInEx files, ready for launch.sh.
 
     python3 make-profile.py <profile-dir> <Author-Name>[ ...]      packages at their latest versions, with dependencies
     python3 make-profile.py <profile-dir> --top N [--skip K] [more]  the N most-downloaded mods with DLLs (from sweep)
-    ... --package <zip>     no Gale layer: the Thunderstore package (dist/) installed as r2modman would
+    ... --package <zip>     no Gale layer: DuctTape's Thunderstore package (its dist/) installed as r2modman would
     ... --plain             nothing added: the mods as they are, for the old game build (old-rounds-for-mods)
 
 Every file is a hard link into ./store, like Gale's cache.
