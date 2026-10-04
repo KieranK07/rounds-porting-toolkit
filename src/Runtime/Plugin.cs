@@ -20,6 +20,7 @@ namespace RoundsPort.Runtime
     [BepInDependency("com.XAngelMoonX.rounds.CosmicRounds", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("io.olavim.rounds.mapsextended", BepInDependency.DependencyFlags.SoftDependency)]
     [BepInDependency("com.willis.rounds.cardsplus", BepInDependency.DependencyFlags.SoftDependency)]
+    [BepInDependency("com.alphahex.rounds.supcom2cards", BepInDependency.DependencyFlags.SoftDependency)]
     public class Plugin : BaseUnityPlugin
     {
         Harmony harmony;
