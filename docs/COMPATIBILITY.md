@@ -84,7 +84,7 @@ The 98 most-downloaded Thunderstore mods with code (October 2026), on the curren
 | Root-Root_Maps | 0.3.3 | fixed | works, no errors |  |
 | willuwontu-RoundsWithFriendSettingsUI | 0.0.1 | nothing to fix | works, no errors |  |
 | otDan-GameSaver | 1.0.7 | fixed | works, no errors |  |
-| Zom_23-ZOMC | 2.4.3 | fixed | works, with a problem | Picking Perseverance (Pristine) after losing a round throws and the pick doesn't finish (it sets up an effect on the dead picker). Pick another card. Being looked at. |
+| Zom_23-ZOMC | 2.4.3 | fixed | works | Perseverance (Pristine)'s pick threw on the current game (fixed by the Runtime). Double Vision logs an error once per pick (its own bug). |
 | Root-Port_of_FFC | 1.3.11 | fixed | works, no errors |  |
 | Pykess-Faces_Plus | 1.0.0 | nothing to fix | works, no errors |  |
 | BossSloth-LocalZoom | 1.1.1 | fixed | works, no errors |  |
@@ -103,4 +103,4 @@ The 98 most-downloaded Thunderstore mods with code (October 2026), on the curren
 | Root-Root_Advanced_Cards | 1.1.6 | fixed | works, no errors |  |
 | AALUND13-JARL | 2.9.1 | fixed | works, no errors |  |
 
-85 works, no errors, 11 works, 1 doesn't work, 1 works, with a problem.
+85 works, no errors, 12 works, 1 doesn't work.
