@@ -55,11 +55,11 @@ The 98 most-downloaded Thunderstore mods with code (October 2026), on the curren
 | poppycars-PoppycarsStatAdditions | 0.1.2 | fixed | works, no errors |  |
 | RS_Mind-RSCards | 1.7.5 | fixed | works, no errors |  |
 | Penial-Infoholic | 2.1.3 | fixed | works | Throws once at the start of a match, before there is a player to show. |
-| Pykess-Map_Embiggener | 2.2.0 | fixed | works, no errors |  |
+| Pykess-Map_Embiggener | 2.2.0 | fixed | works | On the current game its out-of-bounds camera left only the background on screen (fixed by the Runtime). |
 | sinai-dev-UnityExplorer | 4.8.2 | not checked | works, no errors |  |
 | GearUP-GearUpCards | 0.5.1 | fixed | works, no errors |  |
 | BudsCards-BudsCards | 1.2.7 | fixed | works, no errors |  |
-| willis81808-Arcana | 1.9.6 | fixed | works | Crimson Aura threw once in one match (a collider on the player layer with no player); not seen again. |
+| willis81808-Arcana | 1.9.6 | fixed | works | Crimson Aura throws now and then (a collider on the player layer with no player); same on the old game. |
 | RS_Mind-FancyCardBar | 1.3.5 | fixed | works, no errors |  |
 | RS_Mind-RSClasses | 3.2.0 | fixed (1 for the author) | works, no errors |  |
 | HatchetDaddy-HDC | 1.2.7 | fixed | works, no errors |  |
@@ -74,7 +74,7 @@ The 98 most-downloaded Thunderstore mods with code (October 2026), on the curren
 | willis81808-CursorLock | 1.0.1 | nothing to fix | works, no errors |  |
 | CrazyMan-ToggleEffectsMod | 1.1.3 | fixed | works, no errors |  |
 | woukie-MapImageObjects | 1.2.3 | nothing to fix | works, no errors |  |
-| Alphahex-Supcom2Cards | 2.0.3 | fixed | works | Darkenoid's pick threw on the current game (fixed by the Runtime). |
+| Alphahex-Supcom2Cards | 2.0.3 | fixed | works | Darkenoid's pick throws for the round's loser, who picks while dead; same on the old game. |
 | Sfinford-ProjectileChargePatch | 0.0.1 | fixed (hand-made patch) | works, no errors |  |
 | BossSloth-StickFightMaps | 0.3.3 | not checked | doesn't work | Built for MapsExtended 0.9.5: its maps load without their objects and the round stalls. Same on the old game. |
 | Astr0ni-UnstableCards | 2.9.0 | fixed | works, no errors |  |
@@ -84,7 +84,7 @@ The 98 most-downloaded Thunderstore mods with code (October 2026), on the curren
 | Root-Root_Maps | 0.3.3 | fixed | works, no errors |  |
 | willuwontu-RoundsWithFriendSettingsUI | 0.0.1 | nothing to fix | works, no errors |  |
 | otDan-GameSaver | 1.0.7 | fixed | works, no errors |  |
-| Zom_23-ZOMC | 2.4.3 | fixed | works | Perseverance (Pristine)'s pick threw on the current game (fixed by the Runtime). Double Vision logs an error once per pick (its own bug). |
+| Zom_23-ZOMC | 2.4.3 | fixed | works | Perseverance (Pristine)'s pick throws for the round's loser, who picks while dead; same on the old game. Double Vision logs an error once per pick (its own bug). |
 | Root-Port_of_FFC | 1.3.11 | fixed | works, no errors |  |
 | Pykess-Faces_Plus | 1.0.0 | nothing to fix | works, no errors |  |
 | BossSloth-LocalZoom | 1.1.1 | fixed | works, no errors |  |
