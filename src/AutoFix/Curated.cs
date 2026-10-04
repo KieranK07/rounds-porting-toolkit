@@ -53,7 +53,7 @@ sealed class Curated(string cache, ManualLogSource log)
         var port = Ports.FirstOrDefault(p => p.File.Equals(file, StringComparison.OrdinalIgnoreCase));
         if (port != null && needed.TryGetValue(port.File, out var dl) && IsOld(path, bytes))
         {
-            log.LogInfo($"{path}: Bknibb's port in place of the old release");
+            log.LogInfo($"{Short(path)}: Bknibb's port in place of the old release");
             bytes = File.ReadAllBytes(dl);
             sha = port.Sha;
             if (port.With != null)
@@ -69,7 +69,7 @@ sealed class Curated(string cache, ManualLogSource log)
             s.CopyTo(ms);
             var result = Bspatch(bytes, ms.ToArray());
             if (Sha(result) != patch.After) throw new InvalidDataException($"the curated patch for {file} gave the wrong file");
-            log.LogInfo($"{path}: curated patch ({patch.Resource})");
+            log.LogInfo($"{Short(path)}: curated patch ({patch.Resource.Substring("curated/".Length)})");
             bytes = result;
         }
         return bytes;
@@ -83,6 +83,9 @@ sealed class Curated(string cache, ManualLogSource log)
         var with = Path.Combine(Path.GetDirectoryName(path)!, port.With);
         try { if (File.Exists(with) && Sha(File.ReadAllBytes(with)) == Octokit.Sha) File.Delete(with); } catch { }
     }
+
+    // <package folder>/<file>, as AutoFix's other lines name plugins
+    static string Short(string path) => Path.GetFileName(Path.GetDirectoryName(path)) + "/" + Path.GetFileName(path);
 
     static bool IsOld(string path, byte[] bytes)
     {
@@ -107,7 +110,7 @@ sealed class Curated(string cache, ManualLogSource log)
             ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072;   // TLS 1.2
             var req = (HttpWebRequest)WebRequest.Create(p.Url);
             req.UserAgent = "rounds-port";
-            req.Timeout = req.ReadWriteTimeout = 30000;
+            req.Timeout = req.ReadWriteTimeout = 20000;
             using var res = req.GetResponse();
             using var s = res.GetResponseStream()!;
             var ms = new MemoryStream();
@@ -120,15 +123,16 @@ sealed class Curated(string cache, ManualLogSource log)
             var tmp = dest + ".rptmp";
             try
             {
-                using var curl = Process.Start(new ProcessStartInfo("curl", $"-fsSL --max-time 60 -o \"{tmp}\" \"{p.Url}\"")
+                using var curl = Process.Start(new ProcessStartInfo("curl", $"-fsSL --connect-timeout 10 --max-time 40 -o \"{tmp}\" \"{p.Url}\"")
                     { UseShellExecute = false, CreateNoWindow = true })!;
-                curl.WaitForExit(70000);
+                curl.WaitForExit(45000);
                 data = File.Exists(tmp) ? File.ReadAllBytes(tmp) : null;
             }
             catch (Exception e) { why += "; curl: " + e.Message; }
             finally { try { File.Delete(tmp); } catch { } }
         }
         if (data == null || Sha(data) != p.Sha) throw new IOException(data == null ? why : "it doesn't match its SHA-256");
+        log.LogInfo($"downloaded Bknibb's {p.File}" + (why.Length > 0 ? $" with curl (.NET: {why})" : ""));
         File.WriteAllBytes(dest + ".rptmp", data);
         if (File.Exists(dest)) File.Delete(dest);
         File.Move(dest + ".rptmp", dest);

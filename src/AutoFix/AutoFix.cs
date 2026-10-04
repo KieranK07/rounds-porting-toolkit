@@ -181,7 +181,8 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
             // the same DLLs the CLI picks from a folder (Program.Expand): ones that use the game or UnboundLib
             using (var peek = ModuleDefinition.ReadModule(new MemoryStream(input)))
             {
-                if (peek.Assembly != null && Game.OldLibrary(path, peek.Assembly.Name) is string old) return Done(Old, old);
+                // (a port from Curated isn't old; OldLibrary reads the MMHOOK on disk, which is still the old one)
+                if (!curatedOnly && peek.Assembly != null && Game.OldLibrary(path, peek.Assembly.Name) is string old) return Done(Old, old);
                 if (!peek.AssemblyReferences.Any(a => a.Name is "Assembly-CSharp" or "UnboundLib") || peek.Name.StartsWith("MMHOOK"))
                     return curatedOnly ? Save(input, null, Fixed) : Done(NotMod);
             }
