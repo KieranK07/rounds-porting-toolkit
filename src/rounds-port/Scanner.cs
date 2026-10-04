@@ -88,6 +88,9 @@ sealed partial class Scanner(Game game)
                         Add(ins.OpCode.Code == Code.Stfld
                             ? new Issue(Fix.Review, "behaviour", "CardInfo.cardName (write)", "private now. fix writes the private field, so name lookups still find it, but the title the game shows comes from localization: set that through UnboundLib's CustomCard")
                             : new Issue(Fix.Auto, "behaviour", "CardInfo.cardName (read)", "private now, and empty for UnboundLib 4 cards (names moved to localization). fix reads it through a helper that falls back to the localized key, CardName, then the GameObject name"));
+                    if (ins.Operand is FieldReference pf && NowPrivate(pf) is FieldDefinition pd)
+                        Add(new Issue(Fix.Auto, "access", $"{pd.DeclaringType.Name}.{pd.Name} (private now)",
+                            "the runtime throws FieldAccessException on it. fix reads and writes it through reflection"));
                     if (IsDontDestroyOnLoad(ins) && RunsAtPluginLoad(m))
                         Add(new Issue(Fix.Auto, "behaviour", $"{t.FullName}::{m.Name} DontDestroyOnLoad at plugin load",
                             "BepInEx starts plugins before the game loads its first scene, and that load destroys every object made earlier, DontDestroyOnLoad or not (MapsExtended's map object manager dies this way). fix also sets hideFlags DontSave on it, which keeps it"));
@@ -406,6 +409,15 @@ sealed partial class Scanner(Game game)
     public TypeDefinition? Resolve(TypeReference t) { try { return t.Resolve(); } catch { return null; } }
     MethodDefinition? ResolveM(MethodReference m) { try { return md.Resolve(m); } catch { return null; } }
     FieldDefinition? ResolveF(FieldReference f) { try { return md.Resolve(f); } catch { return null; } }
+    // A game field a mod uses that's private (or internal) in the current game, other than the ones with their own rule.
+    public static FieldDefinition? NowPrivate(FieldReference f)
+    {
+        if (!IsGame(f.DeclaringType) || f.DeclaringType is GenericInstanceType || f.Name is "cardName" or "cardDestription") return null;
+        FieldDefinition? d;
+        try { d = f.Resolve(); } catch (AssemblyResolutionException) { return null; }
+        return d != null && !d.DeclaringType.IsValueType && (d.IsPrivate || d.IsAssembly || d.IsFamilyAndAssembly) ? d : null;
+    }
+
     static bool IsGame(TypeReference t) { while (t.DeclaringType != null) t = t.DeclaringType; return t.Scope?.Name?.StartsWith("Assembly-CSharp") == true; }
     static bool IsGame(TypeDefinition t) => t.Module.Assembly.Name.Name == "Assembly-CSharp";
 

@@ -4,7 +4,11 @@
        that BepInEx ships, so it's one DLL with nothing else to install. Needs the game to build (BepInEx/core). -->
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <AssemblyName>rounds-port.AutoFix</AssemblyName>
+    <!-- BepInEx runs patchers' Initialize in order of assembly name. The leading 0 puts AutoFix first, before patchers
+         that open plugin DLLs in their own Initialize (CessilCellsCeaChells keeps them open, and on Windows an open
+         file can't be swapped). The compiler names the assembly after its file, so it's built as 0rounds-port.AutoFix.dll
+         and copied to rounds-port.AutoFix.dll. -->
+    <AssemblyName>0rounds-port.AutoFix</AssemblyName>
     <Version>1.2.0</Version>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
@@ -25,4 +29,7 @@
     <Compile Include="../rounds-port/Scanner.cs;../rounds-port/Fixer.cs;../rounds-port/Known.cs;../rounds-port/Game.cs" LinkBase="core" />
     <EmbeddedResource Include="../rounds-port/helpers/compathelpers.dll" LogicalName="compathelpers.dll" />
   </ItemGroup>
+  <Target Name="CopyToPlainName" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetPath)" DestinationFiles="$(TargetDir)rounds-port.AutoFix.dll" />
+  </Target>
 </Project>

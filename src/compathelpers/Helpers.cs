@@ -117,6 +117,33 @@ public static class __RoundsCompat
         return false;
     }
 
+    // ldfld CardInfo::cardDestription (private now; UnboundLib 4 leaves it empty for mod cards) -> legacy field if
+    // non-empty, else the localized description the game shows (CardDescription), else "".
+    public static string CardDescription(CardInfo card)
+    {
+        if ((object)card == null) throw new NullReferenceException();
+        try
+        {
+            string raw = (string)GameField("CardInfo", "cardDestription").GetValue(card);
+            if (!string.IsNullOrEmpty(raw)) return raw;
+        }
+        catch (Exception) { }
+        try { return card.CardDescription ?? ""; }
+        catch (Exception) { return ""; }
+    }
+
+    // Any other game field that's private now (the runtime throws FieldAccessException): read and write it through
+    // reflection. typeName is the reflection name ("Outer+Inner"). ponytail: no FieldInfo cache, add one if a mod
+    // does this per frame and it shows up in a profile.
+    private static FieldInfo GameField(string typeName, string name) =>
+        typeof(Player).Assembly.GetType(typeName, true).GetField(name, BF | BindingFlags.Static | BindingFlags.Public);
+
+    public static object GetGameField(object obj, string typeName, string name) => GameField(typeName, name).GetValue(obj);
+
+    public static void SetGameField(object obj, object value, string typeName, string name) => GameField(typeName, name).SetValue(obj, value);
+
+    public static void SetStaticGameField(object value, string typeName, string name) => GameField(typeName, name).SetValue(null, value);
+
     // stfld CardInfo::cardName (private now) -> raw write, so CardName() and ModdingUtils' name lookups still see it.
     // The title the game shows comes from m_localizedCardName.
     public static void SetCardNameRaw(CardInfo card, string value)

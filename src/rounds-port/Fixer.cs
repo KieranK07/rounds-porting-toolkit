@@ -128,6 +128,7 @@ sealed class Fixer
                     else if (IsGameField(f, "Player", "teamID")) { getter = getTeamID; setter = Helper("SetTeamIDRaw"); key = "Player.teamID"; }
                     else if (IsGameField(f, "CharacterData", "maxHealth")) { getter = getMaxHealth; setter = Helper("SetMaxHealthRaw"); key = "CharacterData.maxHealth"; }
                     else if (IsGameField(f, "CardInfo", "cardName") && !st) { getter = Helper("CardName"); key = "CardInfo.cardName"; }
+                    else if (IsGameField(f, "CardInfo", "cardDestription") && ld) { getter = Helper("CardDescription"); key = "CardInfo.cardDestription"; }
                     if (key != null)
                     {
                         var getOp = getter!.HasThis ? OpCodes.Callvirt : OpCodes.Call;
@@ -197,6 +198,30 @@ sealed class Fixer
                             Count($"write UIVertex.{f.Name}: Vector2 converted to the new Vector4");
                         }
                         else Notes.Add($"MANUAL {md.FullName}: {ins.OpCode} on UIVertex.{f.Name} (Vector4 now); left as is");
+                    }
+                    else if (Scanner.NowPrivate(f) is FieldDefinition pf)
+                    {
+                        // FieldAccessException otherwise (Unity's Mono ignores IgnoresAccessChecksTo): go through reflection.
+                        var tn = Instruction.Create(OpCodes.Ldstr, pf.DeclaringType.FullName.Replace('/', '+'));
+                        var fn = Instruction.Create(OpCodes.Ldstr, pf.Name);
+                        var code = ins.OpCode.Code;
+                        if (code is Code.Ldfld or Code.Ldsfld)
+                        {
+                            var get = new List<Instruction>();
+                            if (code == Code.Ldsfld) get.Add(Instruction.Create(OpCodes.Ldnull));
+                            get.AddRange(new[] { tn, fn, Instruction.Create(OpCodes.Call, Helper("GetGameField")), Instruction.Create(OpCodes.Unbox_Any, f.FieldType) });
+                            ReplaceWith(il, ins, get[0], get.Skip(1).ToArray());
+                            Count($"read private {pf.DeclaringType.Name}.{pf.Name} -> reflection");
+                        }
+                        else if (code is Code.Stfld or Code.Stsfld)
+                        {
+                            var set = new List<Instruction>();
+                            if (f.FieldType.IsValueType) set.Add(Instruction.Create(OpCodes.Box, f.FieldType));
+                            set.AddRange(new[] { tn, fn, Instruction.Create(OpCodes.Call, Helper(code == Code.Stfld ? "SetGameField" : "SetStaticGameField")) });
+                            ReplaceWith(il, ins, set[0], set.Skip(1).ToArray());
+                            Count($"write private {pf.DeclaringType.Name}.{pf.Name} -> reflection");
+                        }
+                        else Notes.Add($"MANUAL {md.FullName}: {ins.OpCode} on {pf.DeclaringType.Name}.{pf.Name}, which is private now; left as is");
                     }
                 }
                 else if (Scanner.IsDontDestroyOnLoad(ins) && scanner.RunsAtPluginLoad(md))

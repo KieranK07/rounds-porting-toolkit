@@ -120,7 +120,7 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
     // One mod DLL, new or changed since the last start (or everything changed: e is the old entry).
     Entry Check(string rel, string path, Entry? e, bool keyChanged)
     {
-        var bytes = File.ReadAllBytes(path);
+        var bytes = ReadShared(path);
         var sha = Sha(bytes);
         if (e != null && !keyChanged && sha == e.Sha && e.Size >= 0) return e;   // only touched (-1: retry, see Entry.Retry)
 
@@ -194,6 +194,25 @@ sealed class AutoFix(AutoFix.Settings settings, ManualLogSource log)
         else log.LogWarning(line + $"; {manual.Count} MANUAL item{(manual.Count == 1 ? "" : "s")} left, which only its author can fix: " +
                             string.Join("; ", manual.Take(3).Select(i => i.What)) + (manual.Count > 3 ? "; ..." : ""));
         return new Entry { Sha = fixedSha, Orig = origSha, Result = Fixed, Note = manual.Count > 0 ? $"{manual.Count} MANUAL left" : "" };
+    }
+
+    // On Windows a virus scanner (or a mod manager still finishing an install) can hold a fresh DLL open for a moment,
+    // and File.ReadAllBytes then fails with a sharing violation. Read with permissive sharing and retry briefly.
+    static byte[] ReadShared(string path)
+    {
+        for (int i = 0; ; i++)
+        {
+            try
+            {
+                using (var fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete))
+                {
+                    var b = new byte[fs.Length]; int n = 0;
+                    while (n < b.Length) { int r = fs.Read(b, n, b.Length - n); if (r <= 0) throw new EndOfStreamException(path); n += r; }
+                    return b;
+                }
+            }
+            catch (IOException) when (i < 10 && File.Exists(path)) { System.Threading.Thread.Sleep(300); }
+        }
     }
 
     // Puts every fixed mod that is still our copy back to its original, and forgets the index.
