@@ -19,11 +19,11 @@ namespace RoundsPort.Runtime
         internal static MonoBehaviour Host;   // a component on the plugin's hidden helper object
         static bool told;
 
-        static System.Type Manager => AccessTools.TypeByName("MapsExt.NetworkedMapObjectManager");
+        static System.Type Manager => Types.Find("MapsExt.NetworkedMapObjectManager");
         static bool Prepare() => Manager != null && TargetMethod() != null;
         // Instantiate(MapObjectData data, Transform parent, Action<GameObject> onInstantiate): there are other overloads
         internal static MethodBase TargetMethod() => AccessTools.DeclaredMethod(Manager, "Instantiate",
-            new[] { AccessTools.TypeByName("MapsExt.MapObjects.MapObjectData"), typeof(Transform), typeof(System.Action<GameObject>) });
+            new[] { Types.Find("MapsExt.MapObjects.MapObjectData"), typeof(Transform), typeof(System.Action<GameObject>) });
 
         static IEnumerable<CodeInstruction> Transpiler(IEnumerable<CodeInstruction> instructions)
         {

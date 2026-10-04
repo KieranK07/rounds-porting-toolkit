@@ -9,7 +9,7 @@ namespace RoundsPort.Runtime
     [HarmonyPatch]
     internal static class UL_HealthBarRespawns_Fix
     {
-        static MethodBase Target() => AccessTools.Method(AccessTools.TypeByName("UnboundLib.Patches.HealthBar_Patch_Update"), "Postfix");
+        static MethodBase Target() => AccessTools.Method(Types.Find("UnboundLib.Patches.HealthBar_Patch_Update"), "Postfix");
         static bool Prepare() => Target() != null;
         static MethodBase TargetMethod() => Target();
 

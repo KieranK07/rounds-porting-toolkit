@@ -35,7 +35,7 @@ namespace RoundsPort.Runtime
     internal static class StatsPanelGuard_Fix
     {
         internal static BepInEx.Logging.ManualLogSource Log;
-        static Type Attached => AccessTools.TypeByName("UnboundLib.StatsViewer.AttachedCardChoiceUI");
+        static Type Attached => Types.Find("UnboundLib.StatsViewer.AttachedCardChoiceUI");
         static bool Prepare() => Attached != null;
         static MethodBase TargetMethod() => AccessTools.Method(Attached, "ChangePlayer");
 

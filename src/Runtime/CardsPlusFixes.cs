@@ -11,7 +11,7 @@ namespace RoundsPort.Runtime
     [HarmonyPatch]
     internal static class CyberCardPrefab_Fix
     {
-        static System.Type Effect => AccessTools.TypeByName("CardsPlusPlugin.Cards.Cyberpunk.CyberCardEffect");
+        static System.Type Effect => Types.Find("CardsPlusPlugin.Cards.Cyberpunk.CyberCardEffect");
         static bool Prepare() => Effect != null;
         static MethodBase TargetMethod() => AccessTools.Method(Effect, "Start");
 

@@ -112,10 +112,30 @@ namespace RoundsPort.Runtime
 
         static IEnumerable<CardInfo> HiddenCards()
         {
-            var t = AccessTools.TypeByName("ModdingUtils.Utils.Cards");
+            var t = Types.Find("ModdingUtils.Utils.Cards");
             var inst = t == null ? null : AccessTools.Field(t, "instance")?.GetValue(null);
             var hidden = inst == null ? null : AccessTools.Property(t, "HiddenCards")?.GetValue(inst, null) as IEnumerable<CardInfo>;
             return hidden ?? Array.Empty<CardInfo>();
+        }
+    }
+
+    // A mod's type by its full name. AccessTools.TypeByName reads every type of every assembly when the name isn't a
+    // plain Type.GetType hit, and some of these run for every card the game instantiates (CardInfo.Awake asks for its
+    // source card): a big modpack took minutes to build its cards, and an assembly whose types can't all load (Root Core
+    // references the Unity editor) threw inside each scan. Assembly.GetType is a lookup; found types are kept.
+    internal static class Types
+    {
+        static readonly Dictionary<string, Type> found = new Dictionary<string, Type>();
+
+        public static Type Find(string fullName)
+        {
+            if (found.TryGetValue(fullName, out var t)) return t;
+            foreach (var a in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                try { t = a.GetType(fullName, false); } catch { t = null; }
+                if (t != null) return found[fullName] = t;
+            }
+            return null;
         }
     }
 

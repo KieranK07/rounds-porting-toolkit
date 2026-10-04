@@ -15,10 +15,10 @@ namespace RoundsPort.Runtime
     {
         static Type menuCard, animHandler, toggleCards, toggleLevels;
         static MethodInfo toggleAnim;
-        public static Type MenuCard => menuCard ?? (menuCard = AccessTools.TypeByName("UnboundLib.Cards.MenuCard"));
-        public static Type AnimHandler => animHandler ?? (animHandler = AccessTools.TypeByName("UnboundLib.Utils.UI.CardAnimationHandler"));
-        static Type ToggleCards => toggleCards ?? (toggleCards = AccessTools.TypeByName("UnboundLib.Utils.UI.ToggleCardsMenuHandler"));
-        static Type ToggleLevels => toggleLevels ?? (toggleLevels = AccessTools.TypeByName("UnboundLib.Utils.UI.ToggleLevelMenuHandler"));
+        public static Type MenuCard => menuCard ?? (menuCard = Types.Find("UnboundLib.Cards.MenuCard"));
+        public static Type AnimHandler => animHandler ?? (animHandler = Types.Find("UnboundLib.Utils.UI.CardAnimationHandler"));
+        static Type ToggleCards => toggleCards ?? (toggleCards = Types.Find("UnboundLib.Utils.UI.ToggleCardsMenuHandler"));
+        static Type ToggleLevels => toggleLevels ?? (toggleLevels = Types.Find("UnboundLib.Utils.UI.ToggleLevelMenuHandler"));
 
         static FieldInfo cardMenuField, mapInstanceField, mapCanvasField;
 
