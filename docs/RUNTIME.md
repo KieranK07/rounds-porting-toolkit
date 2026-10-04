@@ -1,4 +1,4 @@
-# rounds-port Runtime (in testing)
+# rounds-port Runtime
 
 A BepInEx plugin for problems `fix` can't solve in a mod's DLL: old mods that load on the current game but then throw,
 or draw wrong, while running together. Each patch puts back what the old game did. It adds nothing to the menus,
@@ -20,6 +20,10 @@ rounds-mac-modpack's Mac Compat Fixes is installed, BepInEx skips this plugin: t
 | Cosmic Rounds 2.7.0 | Bullet effects look for the owner on the bullet, card templates run `Start` with no bullet, ice trails outlive their object, hit effects explode with no owner: thousands of errors a round |
 | `CardBar.Update` patches | The game's `CardBar` has no `Update` now. AutoFix disables patches on it (they'd stop the mod's `PatchAll`); these call them every frame for each active card bar, as `Update` did (LocalZoom keeps the hovered card's zoom in step with the camera) |
 | Cards Plus | Its Cyberpunk cards' effect also lands on the card prefab UnboundLib builds, which has no visual, and throws there at startup; skipped on the prefab only |
+| Card source online | UnboundLib makes each modded card its own `sourceCard`, and the 2025 `CardInfo.Awake` only looks the source up when it's empty: a card another player picked pointed at the destroyed pick-screen copy, so card rules (ModdingUtils, Cosmic Rounds' Beetle) differed between machines |
+| Picker during the next hand | The 2025 game clears `CardChoice.pickrID` the moment a player picks; `ReplaceCards` ran with it set on the old game. Pick Phase Improvements and Pick N Cards read the picker from it and the match stayed in the pick phase |
+| UnboundLib 4 health bars | Bknibb's UnboundLib 4 colours health bars for players with respawns left, reading `data.stats` every frame; things that aren't players (Cards+ snakes) have none and it threw every frame. UnboundLib 3 had no such patch |
+| Cosmic Rounds Drone | Two springs nothing assigns, and a missing Homing object at the end of `Start`: an error per bullet per frame |
 
 Source: `src/Runtime`. Patches whose target mod isn't installed are skipped. Safe to swap with Hot Reload: every load
 patches under its own Harmony id and undoes everything when it unloads.
