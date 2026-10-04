@@ -144,6 +144,16 @@ public static class __RoundsCompat
 
     public static void SetStaticGameField(object value, string typeName, string name) => GameField(typeName, name).SetValue(null, value);
 
+    // A Harmony patch's __result from ObjectsToSpawn.SpawnObject, which returned GameObject[] and returns
+    // PoolableWrapper[] now: the objects inside, as the patch used to see them.
+    public static GameObject[] PooledObjects(PoolableWrapper[] wrappers)
+    {
+        if (wrappers == null) return null;
+        var objects = new GameObject[wrappers.Length];
+        for (int i = 0; i < wrappers.Length; i++) objects[i] = wrappers[i]?.Instance;
+        return objects;
+    }
+
     // stfld CardInfo::cardName (private now) -> raw write, so CardName() and ModdingUtils' name lookups still see it.
     // The title the game shows comes from m_localizedCardName.
     public static void SetCardNameRaw(CardInfo card, string value)

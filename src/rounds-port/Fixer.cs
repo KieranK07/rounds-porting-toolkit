@@ -31,7 +31,43 @@ sealed class Fixer
         RpcArgs();
         Renames();
         PluginLoad();
+        SpawnObjectResults();
     }
+
+    // Harmony patches on ObjectsToSpawn.SpawnObject that take its result as GameObject[] (LocalZoom): it returns
+    // PoolableWrapper[] now, and HarmonyX refuses the patch. The parameter becomes PoolableWrapper[] and each read of it
+    // goes through a helper that gives back the GameObjects inside, which is what the patch saw before.
+    void SpawnObjectResults()
+    {
+        foreach (var md in Bodies(M).ToList())
+        {
+            var p = md.Parameters.FirstOrDefault(x => x.Name == "__result");
+            if (p == null || !TargetsSpawnObject(md)) continue;
+            bool byRef = p.ParameterType is ByReferenceType;
+            var elem = byRef ? ((ByReferenceType)p.ParameterType).ElementType : p.ParameterType;
+            if (elem.FullName != "UnityEngine.GameObject[]") continue;
+            var wrappers = new ArrayType(M.ImportReference(GT("FriendlyFoe.PoolableWrapper")));
+            var body = md.Body; var il = body.GetILProcessor();
+            body.SimplifyMacros();
+            var uses = body.Instructions.Where(i => i.Operand == p).ToList();
+            bool readOnly = uses.All(i => i.OpCode == OpCodes.Ldarg && (!byRef || i.Next?.OpCode == OpCodes.Ldind_Ref));
+            if (!readOnly)
+            {
+                body.OptimizeMacros();
+                Notes.Add($"MANUAL {md.FullName}: writes SpawnObject's result (PoolableWrapper[] now); left as is");
+                continue;
+            }
+            p.ParameterType = byRef ? new ByReferenceType(wrappers) : wrappers;
+            foreach (var i in uses) il.InsertAfter(byRef ? i.Next : i, Instruction.Create(OpCodes.Call, Helper("PooledObjects")));
+            body.OptimizeMacros();
+            Count($"{md.DeclaringType.Name}.{md.Name}: SpawnObject result GameObject[] -> PoolableWrapper[] (reads get the objects)");
+        }
+    }
+
+    static bool TargetsSpawnObject(MethodDefinition md) =>
+        md.CustomAttributes.Concat(md.DeclaringType.CustomAttributes).Any(a => a.AttributeType.Name == "HarmonyPatch"
+            && a.ConstructorArguments.Any(x => x.Value is TypeReference t && t.FullName == "ObjectsToSpawn")
+            && a.ConstructorArguments.Any(x => x.Value is string s && s == "SpawnObject"));
 
     void Count(string what) { counts.TryGetValue(what, out var c); counts[what] = c + 1; }
     TypeDefinition GT(string full) => Game.GetType(full) ?? throw new Exception("game type missing " + full);
