@@ -47,7 +47,7 @@ The 98 most-downloaded Thunderstore mods with code (October 2026), on the curren
 | Pykess-RayHitReflectPatch | 0.0.0 | nothing to fix | works, no errors |  |
 | willuwontu-ItemShops | 0.0.2 | fixed | works | Throws for players with no controls, which only the test's AI players are. |
 | willuwontu-EvenSpreadPatch | 0.0.2 | nothing to fix | works, no errors |  |
-| RoundsModdingCommunity-LobbyImprovements | 1.1.0 | nothing to fix | works | Throws once when a local match starts. |
+| RoundsModdingCommunity-LobbyImprovements | 1.1.0 | nothing to fix | works | Its lobby code box needed the Runtime's undrawn-text fix (DuctTape Runtime 1.5.0): before it, building the box threw when a match started. |
 | BossSloth-BetterChat | 1.2.0 | fixed | works, no errors |  |
 | Pykess-Deck_Customization | 0.2.8 | fixed | works, no errors |  |
 | willuwontu-TabInfo | 0.0.7 | fixed | works, no errors |  |
