@@ -1,18 +1,19 @@
-"""Builds a ROUNDS mod profile from Thunderstore the way Gale/r2modman lay one out, then applies the Gale fork's
-ROUNDS layer and the macOS BepInEx files, ready for launch.sh.
+"""Builds a ROUNDS mod profile from Thunderstore the way Gale/r2modman lay one out, then adds DuctTape, and on a Mac
+Crosswind's BepInEx files. Ready for launch.sh.
 
     python3 make-profile.py <profile-dir> <Author-Name>[ ...]      packages at their latest versions, with dependencies
     python3 make-profile.py <profile-dir> --top N [--skip K] [more]  the N most-downloaded mods with DLLs (from sweep)
-    ... --package <zip>     no Gale layer: DuctTape's Thunderstore package (its dist/) installed as r2modman would
+    ... --package <zip>     only this DuctTape package (a dist/ zip), installed as r2modman would
     ... --plain             nothing added: the mods as they are, for the old game build (old-rounds-for-mods)
 
 Every file is a hard link into ./store, like Gale's cache.
 """
-import json, os, shutil, subprocess, sys, time, urllib.request, zipfile
+import glob, json, os, re, shutil, sys, time, urllib.request, zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 STORE = os.path.join(HERE, "store")
 GALE = os.environ.get("GALE_DIR", os.path.join(HERE, "..", "..", "..", "gale-mac"))   # a Gale fork checkout
+DUCTTAPE = os.path.join(HERE, "..", "..", "..", "DuctTape", "dist")
 SWEEP_LIST = os.path.join(HERE, "..", "sweep-packages.tsv")
 UA = {"User-Agent": "rounds-ingame-test"}
 
@@ -104,18 +105,12 @@ def build(dest, versions):
 
 
 def prepare(dest):
-    if os.name == "nt":
-        # no Rust here: layer.py is rounds.rs in Python; Windows uses the Thunderstore BepInExPack as is
-        sys.path.insert(0, HERE)
-        import layer
-        print(f"layer: {len(layer.update(dest))} changes")
-        return
-    # the ROUNDS layer (rounds.rs), then the macOS BepInEx core and Doorstop (macos.rs)
-    env = dict(os.environ, ROUNDS_PREPARE_DIR=os.path.abspath(dest))
-    r = subprocess.run(["cargo", "test", "-q", "--lib", "prepare_dir", "--", "--ignored", "--nocapture"],
-                       cwd=os.path.join(GALE, "src-tauri"), env=env, capture_output=True, text=True)
-    if r.returncode != 0:
-        sys.exit(r.stdout[-3000:] + r.stderr[-3000:])
+    """DuctTape (the newest Thunderstore package in DuctTape/dist), then on a Mac Crosswind's BepInEx core and Doorstop
+    (gale-mac's macos.rs)"""
+    zips = glob.glob(os.path.join(DUCTTAPE, "DuctTape-[0-9]*.zip"))
+    if not zips: sys.exit(f"no DuctTape package in {DUCTTAPE}: run DuctTape's scripts/package.py")
+    install(dest, max(zips, key=lambda z: [int(n) for n in re.findall(r"\d+", os.path.basename(z))]))
+    if os.name == "nt": return
     mac = os.path.join(GALE, "src-tauri/resources/macos")
     for root, _, files in os.walk(mac):
         for fn in files:

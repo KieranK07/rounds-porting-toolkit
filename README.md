@@ -174,7 +174,7 @@ dotnet run --project src/rounds-port -c Release -- scan "C:\path\to\MyMod.dll"
 Other folders: `patches/` hand-made patches for specific mod releases ([patches/README.md](patches/README.md)),
 `data/old-libraries.tsv` every old UnboundLib, MMHook and RoundsWithFriends release by SHA-256, `tests/` the sweep and
 the in-game bench ([tests/ingame](tests/ingame)). [DuctTape](https://github.com/KieranK07/DuctTape) (the mod, AutoFix and
-the Runtime) builds from `src/rounds-port`; it, [Crosswind](https://github.com/KieranK07/crosswind) and the
+the Runtime) builds from `src/rounds-port`; it and the
 [modpack](https://github.com/KieranK07/rounds-mac-modpack) take the patches and the Odin stand-in from here.
 
 Game path: `C:\Program Files (x86)\Steam\steamapps\common\ROUNDS` or the macOS Steam folder by default; elsewhere,

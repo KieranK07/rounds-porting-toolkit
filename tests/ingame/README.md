@@ -6,12 +6,12 @@ this checks what players see.
 
 Runs on Windows (the macOS scripts `launch.sh`, `batches.sh` and `isolate.sh` are the older Mac versions). Needs
 Python 3 with Pillow, a copy of ROUNDS with BepInEx in it for building the pilot, and a checkout of the
-[Crosswind](https://github.com/KieranK07/crosswind) (the Gale fork) next to this repo (or `GALE_DIR`) for profiles that use its ROUNDS layer.
+[DuctTape](https://github.com/KieranK07/DuctTape) next to this repo, its package built (`dist/`), and on a Mac [Crosswind](https://github.com/KieranK07/crosswind) (the Gale fork) too (or `GALE_DIR`) for its BepInEx files.
 Profiles, downloads (`store/`) and run output stay here and are not committed.
 
 | Command | Does |
 |---|---|
-| `python make-profile.py profiles/x Author-Name ...` | a profile laid out like Gale's, from Thunderstore, with the Gale layer; `--package <zip>` lays it out like r2modman with the DuctTape package instead; `--plain` leaves the mods untouched |
+| `python make-profile.py profiles/x Author-Name ...` | a profile laid out like Gale's, from Thunderstore, with DuctTape (and on a Mac, Crosswind's BepInEx); `--package <zip>` adds only that DuctTape package; `--plain` leaves the mods untouched |
 | `python pilot.py matches profiles/b0 profiles/b1 ...` | a match between two AI players per profile; `match` / `online` for one |
 | `python oldnew.py 0 1 ...` | the same profiles on the 2025 game (`b<i>`) and the `old-rounds-for-mods` beta (`o<i>`) |
 | `python compare-shots.py out.html 7 8 0` | each card captured on both builds, side by side |
