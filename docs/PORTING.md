@@ -13,9 +13,9 @@ you're porting for everyone on the current game, which includes every Mac player
 
 You need BepInEx plus the libraries most mods depend on, already ported to v1.1.2:
 
-- **Everything at once** (Windows and macOS): the [rounds-mac-modpack](https://github.com/KieranK07/rounds-mac-modpack)
-  installer sets up BepInEx and 31 working mods, including UnboundLib 4, ModdingUtils, RarityLib, Classes Manager
-  Reborn and RoundsWithFriends. One command; it backs up whatever mods you had.
+- **Everything at once**: [DuctTape](https://github.com/KieranK07/DuctTape) with any mod manager (on a Mac,
+  [Crosswind](https://github.com/KieranK07/crosswind)). It puts in UnboundLib 4 and RoundsWithFriends 3 and fixes the
+  other old mods (ModdingUtils, RarityLib, Classes Manager Reborn, ...) while the game starts.
 - **Only the basics**: [BepInEx 5.4.23](https://github.com/BepInEx/BepInEx/releases/tag/v5.4.23.5) (`win_x64` zip,
   extracted into the game folder), with `HideManagerGameObject = true` in `BepInEx\config\BepInEx.cfg` (start the game
   once to create it): without that, v1.1.2 destroys BepInEx's manager object and no mod runs. Then Bknibb's

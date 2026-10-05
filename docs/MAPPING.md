@@ -1,7 +1,7 @@
 # ROUNDS v1.1.2: old → new game API (detailed)
 
 What the v1.1.2 update changed for mods, member by member, with the IL rewrite `rounds-port fix` uses and how sure we
-are of it. Worked out while porting the 31 mods of [rounds-mac-modpack](https://github.com/KieranK07/rounds-mac-modpack)
+are of it. Worked out while porting the 31 mods of the first Mac modpack
 against the current game, Bknibb's UnboundLib 4.2.5 and RoundsWithFriends 3.0.10. For the short version, see the
 table in the [README](../README.md#what-fix-handles) and [PORTING.md](PORTING.md).
 

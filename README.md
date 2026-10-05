@@ -127,7 +127,7 @@ frames saved before localization, and shaders that draw pink on macOS.
 
 ## How well it works
 
-- On the 12 mods ported for [rounds-mac-modpack](https://github.com/KieranK07/rounds-mac-modpack), `fix` reproduces 8
+- On the 12 mods ported by hand for the first Mac modpack, `fix` reproduces 8
   byte for byte (Cosmic Rounds, Classes Manager Reborn, RarityLib, ModsPlus, Will's Wacky Map Objects, CardBarPatch,
   GunUnblockablePatch, TemporaryStatsPatch). For the other 4 it fixes the mechanical parts and flags the rest.
 - The 100 most-downloaded Thunderstore mods (October 2026): no crashes, and after `fix` 74 of 98 have nothing left
@@ -174,8 +174,7 @@ dotnet run --project src/rounds-port -c Release -- scan "C:\path\to\MyMod.dll"
 Other folders: `patches/` hand-made patches for specific mod releases ([patches/README.md](patches/README.md)),
 `data/old-libraries.tsv` every old UnboundLib, MMHook and RoundsWithFriends release by SHA-256, `tests/` the sweep and
 the in-game bench ([tests/ingame](tests/ingame)). [DuctTape](https://github.com/KieranK07/DuctTape) (the mod, AutoFix and
-the Runtime) builds from `src/rounds-port`; it and the
-[modpack](https://github.com/KieranK07/rounds-mac-modpack) take the patches and the Odin stand-in from here.
+the Runtime) builds from `src/rounds-port` and takes the patches and the Odin stand-in from here.
 
 Game path: `C:\Program Files (x86)\Steam\steamapps\common\ROUNDS` or the macOS Steam folder by default; elsewhere,
 add `-p:GameDir="<folder>"`. After changing `src/compathelpers` or `src/HotReload`, build it with
