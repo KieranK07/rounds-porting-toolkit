@@ -273,13 +273,25 @@ public class Pilot : BaseUnityPlugin
             while (!PhotonNetwork.InRoom) { Timeout(until, "hosting a room"); yield return null; }
             yield return new WaitForSecondsRealtime(1);   // after RWF's OnJoinedRoom sets its default mode
             SetMode("Deathmatch", "Arms race");   // free-for-all: the two characters always get different colours, so the lobby can start
-            File.WriteAllText(roomFile, (string)PhotonNetwork.CurrentRoom.CustomProperties[NetworkConnectionHandler.ROOM_CODE]);
+            // the room code, and LobbyImprovements' lobby code when it's installed (what a player pastes to join)
+            var li = FindType("LobbyImprovements.Networking.LobbyCodeHandler", false);
+            var liCode = li == null ? "" : (string)li.GetMethod("GetCode", Any).Invoke(null, null);
+            File.WriteAllText(roomFile, (string)PhotonNetwork.CurrentRoom.CustomProperties[NetworkConnectionHandler.ROOM_CODE] + "\n" + liCode);
         }
         else
         {
             string code;
             while ((code = File.Exists(roomFile) ? File.ReadAllText(roomFile).Trim() : "") == "") { Timeout(until, "waiting for the host's room code"); yield return new WaitForSecondsRealtime(1); }
-            NetworkConnectionHandler.instance.JoinRoom(code);
+            var lines = code.Split('\n');
+            code = lines[0].Trim();
+            var li = FindType("LobbyImprovements.Networking.LobbyCodeHandler", false);
+            if (li != null && lines.Length > 1 && lines[1].Trim() != "")
+            {
+                // the lobby code, as a player joins with LobbyImprovements (it carries the host's region too)
+                var result = li.GetMethod("ConnectToRoom", Any).Invoke(null, new object[] { lines[1].Trim() });
+                Logger.LogInfo($"pilot: LobbyImprovements lobby code {lines[1].Trim()}: {result}");
+            }
+            else NetworkConnectionHandler.instance.JoinRoom(code);
             while (!PhotonNetwork.InRoom) { Timeout(until, "joining room " + code); yield return null; }
         }
         Logger.LogInfo($"pilot: in room {PhotonNetwork.CurrentRoom.Name} as {mode}");
