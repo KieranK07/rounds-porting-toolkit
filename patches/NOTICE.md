@@ -8,8 +8,8 @@ removed, open an issue.
 |---|---|---|
 | ModdingUtils 0.4.8 (Pykess, [pdcook/ModdingUtils](https://github.com/pdcook/ModdingUtils)) | GPL-3.0 | Every source change is in `tools/moddingutils/moddingutils-0.4.8-compat.patch`, GPL-3.0 |
 | CardBarPatch 2.1.1 (BossSloth), Performance Improvements 0.2.0 (RoundsModding) | GPL-3.0 | IL rewrites by `tools/compatfix` + `tools/compathelpers` (source here, GPL-3.0 for these changes), listed in `PATCHLOG-simple.md` |
-| UnboundLib 4.2.5 ([Bknibb/UnboundLib](https://github.com/Bknibb/UnboundLib)) | none stated | One call to a Windows-only API replaced (`tools/unboundlib-macfix`, `PATCHLOG-macfix.md`) |
-| UnboundLib 3.2.14, MMHook 1.0.0 (willis81808), RoundsWithFriends 2.2.2 (olavim) | UnboundLib: none stated; RoundsWithFriends: GPL-3.0 | The result is Bknibb's ports, used with his OK: [Bknibb/UnboundLib](https://github.com/Bknibb/UnboundLib) 4.2.5, [Bknibb/RoundsWithFriends](https://github.com/Bknibb/RoundsWithFriends) 3.0.10 (GPL-3.0, source there); `PATCHLOG-libraries.md` |
+| UnboundLib 4.2.5 and 4.2.7 ([Bknibb/UnboundLib](https://github.com/Bknibb/UnboundLib)) | none stated | One call to a Windows-only API replaced (`tools/unboundlib-macfix`, `PATCHLOG-macfix.md`) |
+| UnboundLib 3.2.14, MMHook 1.0.0 (willis81808), RoundsWithFriends 2.2.2 (olavim) | UnboundLib: none stated; RoundsWithFriends: GPL-3.0 | The result is Bknibb's ports, used with his OK: [Bknibb/UnboundLib](https://github.com/Bknibb/UnboundLib) 4.2.7, [Bknibb/RoundsWithFriends](https://github.com/Bknibb/RoundsWithFriends) 3.0.10 (GPL-3.0, source there); `PATCHLOG-libraries.md` |
 | MapsExtended 1.4.2 (olavim) | MIT, plus BSD-3-Clause for its bundled NetTopologySuite | `tools/mapsextended-patcher`, `PATCHLOG-maps.md` |
 | Classes Manager Reborn, Cosmic Rounds, GrowPatch, GunChargePatch, GunUnblockablePatch, ModsPlus, ProjectileChargePatch, RarityLib, TemporaryStatsPatch, Will's Wacky Map Objects | each author's own | Listed in the matching `PATCHLOG-*.md` |
 

@@ -25,7 +25,7 @@ fifth column `macos` limits a patch to macOS (UnboundLib's Windows-only "hold Le
 | MapsExtended, Will's Wacky Map Objects | `tools/mapsextended-patcher` | [PATCHLOG-maps.md](PATCHLOG-maps.md) |
 | ModdingUtils | rebuilt from source with `tools/moddingutils/moddingutils-0.4.8-compat.patch` | [PATCHLOG-moddingutils.md](PATCHLOG-moddingutils.md) |
 | GunChargePatch, ProjectileChargePatch | `tools/guncharge-patcher` | [PATCHLOG-guncharge.md](PATCHLOG-guncharge.md) |
-| UnboundLib 4.2.5 (macOS) | `tools/unboundlib-macfix` | [PATCHLOG-macfix.md](PATCHLOG-macfix.md) |
+| UnboundLib 4.2.5 and 4.2.7 (macOS) | `tools/unboundlib-macfix` | [PATCHLOG-macfix.md](PATCHLOG-macfix.md) |
 | UnboundLib 3.2.14, MMHook 1.0.0, RoundsWithFriends 2.2.2 | `bsdiff` to Bknibb's ports | [PATCHLOG-libraries.md](PATCHLOG-libraries.md) |
 
 Licences of the patched mods and of these changes: [NOTICE.md](NOTICE.md).

@@ -5,6 +5,8 @@ On macOS this throws DllNotFoundException and aborts the constructor, so none of
 ("DefaultPool failed to load ..."), EscapeMenuHandlerPath.Update NREs, ExecuteAfterSeconds NREs.
 Fix: the call is replaced by `pop; ldc.i4.0` (key never held) and the P/Invoke + user32 ModuleRef are removed.
 Original DLL kept as notes/UnboundLib.original-bknibb-4.2.5.dll. Safe on Windows too.
+4.2.7 (2026-10-05): the same one call site, same tool (`tools/unboundlib-macfix`, with the game's Managed folder and
+BepInEx core as search folders); running it on 4.2.5 again gives the recorded 4.2.5 result byte for byte.
 
 # BepInEx.cfg: HideManagerGameObject = true
 The current game destroys BepInEx's manager GameObject early on, so every plugin's instance
