@@ -285,14 +285,26 @@ public class Pilot : BaseUnityPlugin
             var lines = code.Split('\n');
             code = lines[0].Trim();
             var li = FindType("LobbyImprovements.Networking.LobbyCodeHandler", false);
-            if (li != null && lines.Length > 1 && lines[1].Trim() != "")
+            // The game joins by searching the room-code lobby's room list for the code. Wait as long as a player typing
+            // the code would, and try again if a join misses ("Found no rooms to join"), so one slow list doesn't fail
+            // the run; a room that never shows up still times out.
+            for (int attempt = 1; !PhotonNetwork.InRoom; attempt++)
             {
-                // the lobby code, as a player joins with LobbyImprovements (it carries the host's region too)
-                var result = li.GetMethod("ConnectToRoom", Any).Invoke(null, new object[] { lines[1].Trim() });
-                Logger.LogInfo($"pilot: LobbyImprovements lobby code {lines[1].Trim()}: {result}");
+                yield return new WaitForSecondsRealtime(10);
+                if (li != null && lines.Length > 1 && lines[1].Trim() != "")
+                {
+                    // the lobby code, as a player joins with LobbyImprovements (it carries the host's region too)
+                    var result = li.GetMethod("ConnectToRoom", Any).Invoke(null, new object[] { lines[1].Trim() });
+                    Logger.LogInfo($"pilot: join {attempt}: LobbyImprovements lobby code {lines[1].Trim()}: {result}");
+                }
+                else
+                {
+                    Logger.LogInfo($"pilot: join {attempt}: room {code}");
+                    NetworkConnectionHandler.instance.JoinRoom(code);
+                }
+                var giveUp = Time.realtimeSinceStartup + 20;
+                while (!PhotonNetwork.InRoom && Time.realtimeSinceStartup < giveUp) { Timeout(until, "joining room " + code); yield return null; }
             }
-            else NetworkConnectionHandler.instance.JoinRoom(code);
-            while (!PhotonNetwork.InRoom) { Timeout(until, "joining room " + code); yield return null; }
         }
         Logger.LogInfo($"pilot: in room {PhotonNetwork.CurrentRoom.Name} as {mode}");
         yield return new WaitForSecondsRealtime(2);
