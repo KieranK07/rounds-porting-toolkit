@@ -16,7 +16,7 @@ UnboundLib 4 also needs `Octokit.dll` from the same release (MIT), which DuctTap
 2026-10-05: the UnboundLib patch goes to 4.2.7 instead of 4.2.5 (4.2.6 added a card bar toggle, 4.2.7 is the same
 code built as Release). Its `MMHOOK_Assembly-CSharp.dll` and `Octokit.dll` are the same files as 4.2.5's.
 
-2026-10-05, later: UnboundLib comes from our fork of Bknibb's 4.2.7 (`ducttape` branch, commit 4ac50c5, built with
+2026-10-05, later: UnboundLib comes from our fork of Bknibb's 4.2.7 (`ducttape` branch, commit 2ea4fff, built with
 `dotnet build -c Release` against the current game: the same sha256 every build). Its changes:
 - Escape in the escape menu's MODS pages goes back a page again (it did nothing on the current game).
 - Toggle Cards / Toggle Levels open in front: the map showed through them in sandbox, and opened from the escape menu
@@ -26,6 +26,8 @@ code built as Release). Its `MMHOOK_Assembly-CSharp.dll` and `Octokit.dll` are t
 - No "update available" line for Bknibb's releases: players update DuctTape, not UnboundLib.
 - A rematch no longer stops when a player's card list holds a card that's already destroyed (it threw in the
   `Player.FullReset` postfix and left the lobby stuck).
+- Sandbox waits for its map before adding a player: the current game lets players join before the first map has
+  loaded, so with a custom map the player often never spawned.
 
 Bknibb's own 4.2.5 and 4.2.7, when installed as they are, still get the macOS fix on a Mac.
 Older releases of the three libraries aren't patched: DuctTape asks the player to update them.
